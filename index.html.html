@@ -1,0 +1,1246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎄 Festive Christmas Party QR Attendance System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Mountains+of+Christmas:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- HTML5-QRCode Scanner Library -->
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <!-- Canvas Confetti -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        xmas: {
+                            red: '#D42426',
+                            darkred: '#900C3F',
+                            green: '#165B33',
+                            darkgreen: '#0B3B24',
+                            gold: '#F8B229',
+                            cream: '#FFF9E6',
+                            cardBg: '#112217'
+                        }
+                    },
+                    fontFamily: {
+                        festive: ['"Mountains of Christmas"', 'cursive'],
+                        sans: ['"Plus Jakarta Sans"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        /* Custom Falling Snow Animation */
+        .snowflake {
+            color: #fff;
+            font-size: 1em;
+            font-family: Arial, sans-serif;
+            text-shadow: 0 0 5px #000;
+            position: fixed;
+            top: -10%;
+            z-index: 9999;
+            user-select: none;
+            cursor: default;
+            animation-name: snowflakes-fall, snowflakes-shake;
+            animation-duration: 10s, 3s;
+            animation-timing-function: linear, ease-in-out;
+            animation-iteration-count: infinite, infinite;
+            animation-play-state: running, running;
+        }
+
+        @keyframes snowflakes-fall {
+            0% { top: -10%; }
+            100% { top: 100%; }
+        }
+
+        @keyframes snowflakes-shake {
+            0%, 100% { transform: translateX(0px); }
+            50% { transform: translateX(80px); }
+        }
+
+        /* Generate multiple snowflake delays */
+        .snowflake:nth-of-type(0) { left: 1%; animation-delay: 0s, 0s; }
+        .snowflake:nth-of-type(1) { left: 10%; animation-delay: 1s, 1s; }
+        .snowflake:nth-of-type(2) { left: 20%; animation-delay: 6s, 0.5s; }
+        .snowflake:nth-of-type(3) { left: 30%; animation-delay: 4s, 2s; }
+        .snowflake:nth-of-type(4) { left: 40%; animation-delay: 2s, 2s; }
+        .snowflake:nth-of-type(5) { left: 50%; animation-delay: 8s, 3s; }
+        .snowflake:nth-of-type(6) { left: 60%; animation-delay: 6s, 2s; }
+        .snowflake:nth-of-type(7) { left: 70%; animation-delay: 2.5s, 1s; }
+        .snowflake:nth-of-type(8) { left: 80%; animation-delay: 1s, 0s; }
+        .snowflake:nth-of-type(9) { left: 90%; animation-delay: 3s, 1.5s; }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #0B3B24;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #F8B229;
+            border-radius: 4px;
+        }
+
+        /* Gold Gradient Borders & Glows */
+        .gold-glow {
+            box-shadow: 0 0 15px rgba(248, 178, 41, 0.4);
+        }
+        .red-glow {
+            box-shadow: 0 0 20px rgba(212, 36, 38, 0.6);
+        }
+        .green-glow {
+            box-shadow: 0 0 20px rgba(22, 91, 51, 0.8);
+        }
+    </style>
+</head>
+<body class="bg-xmas-darkgreen text-gray-100 min-h-screen flex flex-col font-sans relative overflow-x-hidden">
+
+    <!-- Falling Snow Effects -->
+    <div class="snowflakes" aria-hidden="true">
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+        <div class="snowflake">❅</div>
+        <div class="snowflake">❆</div>
+        <div class="snowflake">❄</div>
+    </div>
+
+    <!-- Header Navigation Bar -->
+    <header class="bg-gradient-to-r from-xmas-darkred via-xmas-red to-xmas-darkred border-b-4 border-xmas-gold sticky top-0 z-40 shadow-xl">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <!-- Logo / Title -->
+            <div class="flex items-center space-x-3 text-center sm:text-left">
+                <div class="w-12 h-12 bg-xmas-gold rounded-full flex items-center justify-center text-xmas-darkred font-bold text-2xl shadow-lg border-2 border-white">
+                    🎅
+                </div>
+                <div>
+                    <h1 class="font-festive text-3xl sm:text-4xl text-xmas-gold font-bold tracking-wide drop-shadow-md">
+                        Christmas Party 🎁
+                    </h1>
+                    <p class="text-xs text-xmas-cream opacity-90 tracking-wider uppercase font-semibold">QR Attendance & Invitation Portal</p>
+                </div>
+            </div>
+
+            <!-- Mode Switcher Tabs -->
+            <div class="flex bg-xmas-darkgreen/80 p-1.5 rounded-2xl border border-xmas-gold/40 shadow-inner">
+                <button id="tabStaffBtn" onclick="switchTab('staff')" 
+                    class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 text-xmas-gold bg-xmas-green shadow">
+                    <i class="fa-solid fa-qrcode text-lg"></i>
+                    <span>Staff Check-In Portal</span>
+                </button>
+                <button id="tabAdminBtn" onclick="switchTab('admin')" 
+                    class="px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 text-gray-300 hover:text-white">
+                    <i class="fa-solid fa-users-gear text-lg"></i>
+                    <span>Guest Admin & Emailer</span>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- STATS DASHBOARD SUMMARY BAR -->
+        <section class="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+            <div class="bg-xmas-cardBg border-2 border-xmas-gold/30 rounded-2xl p-4 flex items-center justify-between shadow-lg relative overflow-hidden group hover:border-xmas-gold transition-all">
+                <div class="z-10">
+                    <p class="text-xs uppercase font-bold text-xmas-gold tracking-wider">Total Guests Invited</p>
+                    <h3 id="statTotalGuests" class="text-3xl font-extrabold text-white mt-1">0</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-xmas-gold/10 border border-xmas-gold/30 flex items-center justify-center text-xmas-gold text-2xl z-10">
+                    <i class="fa-solid fa-clipboard-list"></i>
+                </div>
+                <div class="absolute -right-4 -bottom-4 text-6xl text-white/5 font-extrabold group-hover:scale-110 transition-transform">📋</div>
+            </div>
+
+            <div class="bg-xmas-cardBg border-2 border-emerald-500/40 rounded-2xl p-4 flex items-center justify-between shadow-lg relative overflow-hidden group hover:border-emerald-400 transition-all">
+                <div class="z-10">
+                    <p class="text-xs uppercase font-bold text-emerald-400 tracking-wider">Checked-In (Arrived)</p>
+                    <h3 id="statCheckedIn" class="text-3xl font-extrabold text-white mt-1">0</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400 text-2xl z-10">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div class="absolute -right-4 -bottom-4 text-6xl text-white/5 font-extrabold group-hover:scale-110 transition-transform">🎄</div>
+            </div>
+
+            <div class="bg-xmas-cardBg border-2 border-rose-500/40 rounded-2xl p-4 flex items-center justify-between shadow-lg relative overflow-hidden group hover:border-rose-400 transition-all">
+                <div class="z-10">
+                    <p class="text-xs uppercase font-bold text-rose-400 tracking-wider">Pending Arrival</p>
+                    <h3 id="statPending" class="text-3xl font-extrabold text-white mt-1">0</h3>
+                </div>
+                <div class="w-12 h-12 rounded-xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 text-2xl z-10">
+                    <i class="fa-solid fa-hourglass-half"></i>
+                </div>
+                <div class="absolute -right-4 -bottom-4 text-6xl text-white/5 font-extrabold group-hover:scale-110 transition-transform">⏳</div>
+            </div>
+        </section>
+
+        <!-- ====================================================================== -->
+        <!-- SECTION 1: STAFF SCANNER PORTAL -->
+        <!-- ====================================================================== -->
+        <section id="staffSection" class="space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+                <!-- Left Column: Camera Scanner & Manual Input -->
+                <div class="lg:col-span-7 bg-xmas-cardBg border-2 border-xmas-gold/40 rounded-3xl p-6 shadow-2xl relative">
+                    <div class="flex items-center justify-between mb-4 border-b border-xmas-gold/20 pb-3">
+                        <h2 class="text-xl font-bold text-xmas-gold flex items-center gap-2">
+                            <i class="fa-solid fa-camera text-xmas-red"></i> Staff QR Scanner Camera
+                        </h2>
+                        <span id="scannerStatusBadge" class="px-3 py-1 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-full text-xs font-semibold">
+                            Camera Idle
+                        </span>
+                    </div>
+
+                    <!-- Scanner Video Container -->
+                    <div class="relative bg-black/80 rounded-2xl overflow-hidden border-2 border-dashed border-xmas-gold/50 min-h-[300px] flex flex-col items-center justify-center">
+                        <div id="reader" class="w-full"></div>
+
+                        <div id="scannerPlaceholder" class="p-8 text-center space-y-4">
+                            <div class="w-20 h-20 mx-auto rounded-full bg-xmas-red/20 border-2 border-xmas-red flex items-center justify-center text-3xl text-xmas-gold">
+                                📷
+                            </div>
+                            <p class="text-sm text-gray-300 max-w-sm">Click start below to grant camera access, or upload/snap an image of a ticket QR code.</p>
+                        </div>
+                    </div>
+
+                    <!-- HTTPS Warning Banner (Shown if insecure context) -->
+                    <div id="httpWarningBanner" class="hidden mt-3 p-3 bg-amber-900/80 border border-amber-500 rounded-xl text-amber-200 text-xs flex items-center gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-400 text-base"></i>
+                        <span><strong>Camera Notice:</strong> Web browsers block live cameras on unsecure HTTP links. Use HTTPS or localhost, or use the <strong>Upload QR Photo</strong> option below.</span>
+                    </div>
+
+                    <!-- Camera Select & Controls -->
+                    <div class="mt-4 space-y-3">
+                        <div class="flex flex-col sm:flex-row gap-2">
+                            <select id="cameraSelect" class="flex-grow bg-xmas-darkgreen border border-xmas-gold/40 rounded-xl px-3 py-2 text-white text-xs focus:outline-none focus:border-xmas-gold">
+                                <option value="">Auto-Detect Camera (Back Camera preferred)</option>
+                            </select>
+                        </div>
+
+                        <div class="flex flex-wrap gap-3">
+                            <button id="startScanBtn" onclick="startScanner()" 
+                                class="flex-1 bg-gradient-to-r from-emerald-600 to-xmas-green hover:from-emerald-500 hover:to-emerald-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm">
+                                <i class="fa-solid fa-play"></i> Start Camera Scanner
+                            </button>
+                            <button id="stopScanBtn" onclick="stopScanner()" disabled
+                                class="flex-1 bg-gray-700 opacity-50 cursor-not-allowed hover:bg-gray-600 text-white font-bold py-3 px-4 rounded-xl shadow-lg transition flex items-center justify-center gap-2 text-sm">
+                                <i class="fa-solid fa-stop"></i> Stop Camera
+                            </button>
+                        </div>
+
+                        <!-- Fallback Image QR Upload -->
+                        <div class="flex items-center justify-between bg-black/30 p-2.5 rounded-xl border border-xmas-gold/20 text-xs">
+                            <span class="text-gray-300 font-medium"><i class="fa-solid fa-file-image text-xmas-gold mr-1"></i> Scan from Photo / File:</span>
+                            <label class="bg-xmas-green hover:bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg cursor-pointer transition text-xs flex items-center gap-1.5">
+                                <i class="fa-solid fa-upload"></i> Upload QR Image
+                                <input type="file" id="qrFileInput" accept="image/*" onchange="handleQrFileUpload(event)" class="hidden">
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Manual Entry Fallback -->
+                    <div class="mt-6 pt-5 border-t border-xmas-gold/20">
+                        <label class="block text-xs font-bold text-xmas-gold uppercase tracking-wider mb-2">
+                            Manual Ticket ID Entry / Search
+                        </label>
+                        <form onsubmit="handleManualCheckIn(event)" class="flex gap-2">
+                            <div class="relative flex-grow">
+                                <input type="text" id="manualTicketInput" placeholder="Enter ID e.g. TKT-XMAS-101" 
+                                    class="w-full bg-xmas-darkgreen border-2 border-xmas-gold/40 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:outline-none focus:border-xmas-gold text-sm uppercase">
+                            </div>
+                            <button type="submit" class="bg-xmas-red hover:bg-red-600 text-white font-bold px-6 py-3 rounded-xl shadow-lg transition text-sm flex items-center gap-2">
+                                <i class="fa-solid fa-bolt"></i> Check-In
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Right Column: Verification Results & Live Feed -->
+                <div class="lg:col-span-5 space-y-6">
+                    
+                    <!-- Result Display Box -->
+                    <div class="bg-xmas-cardBg border-2 border-xmas-gold/40 rounded-3xl p-6 shadow-2xl">
+                        <h2 class="text-xl font-bold text-xmas-gold mb-4 border-b border-xmas-gold/20 pb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-shield-halved"></i> Verification Result
+                        </h2>
+
+                        <!-- Default Standby State -->
+                        <div id="resultContainerDefault" class="py-12 text-center text-gray-400 space-y-3">
+                            <i class="fa-solid fa-qrcode text-5xl text-xmas-gold/30 animate-pulse"></i>
+                            <p class="text-sm">Awaiting QR scan or manual ticket entry...</p>
+                        </div>
+
+                        <!-- Scan Result Banner (Hidden initially) -->
+                        <div id="resultCard" class="hidden p-6 rounded-2xl text-center space-y-4 border-2 transition-all">
+                            <div id="resultIcon" class="w-16 h-16 mx-auto rounded-full flex items-center justify-center text-3xl font-extrabold shadow-md">
+                                <!-- Populated dynamically -->
+                            </div>
+                            <div>
+                                <h3 id="resultTitle" class="text-2xl font-black">--</h3>
+                                <p id="resultMessage" class="text-sm mt-1">--</p>
+                            </div>
+
+                            <!-- Guest Details Details Card -->
+                            <div id="resultDetails" class="bg-black/30 rounded-xl p-4 text-left space-y-2 text-sm border border-white/10 mt-4">
+                                <div class="flex justify-between border-b border-white/10 pb-1">
+                                    <span class="text-gray-400">Guest Name:</span>
+                                    <span id="resGuestName" class="font-bold text-white">--</span>
+                                </div>
+                                <div class="flex justify-between border-b border-white/10 pb-1">
+                                    <span class="text-gray-400">Ticket ID:</span>
+                                    <span id="resTicketId" class="font-mono text-xmas-gold font-bold">--</span>
+                                </div>
+                                <div class="flex justify-between border-b border-white/10 pb-1">
+                                    <span class="text-gray-400">Department / Table:</span>
+                                    <span id="resDept" class="font-semibold text-white">--</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span class="text-gray-400">Check-in Time:</span>
+                                    <span id="resTime" class="text-emerald-400 font-semibold">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Check-Ins Activity Feed -->
+                    <div class="bg-xmas-cardBg border-2 border-xmas-gold/40 rounded-3xl p-5 shadow-2xl">
+                        <h3 class="text-md font-bold text-xmas-gold mb-3 flex items-center justify-between">
+                            <span><i class="fa-solid fa-clock-rotate-left mr-2"></i> Recent Check-Ins</span>
+                            <span class="text-xs text-gray-400 font-normal">Live Log</span>
+                        </h3>
+                        <div id="recentActivityList" class="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- ====================================================================== -->
+        <!-- SECTION 2: GUEST MANAGEMENT & QR EMAILER -->
+        <!-- ====================================================================== -->
+        <section id="adminSection" class="hidden space-y-8">
+            
+            <!-- Add Guest Form & Quick Tools -->
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                
+                <!-- Registration Form -->
+                <div class="lg:col-span-7 bg-xmas-cardBg border-2 border-xmas-gold/40 rounded-3xl p-6 shadow-2xl">
+                    <h2 class="text-xl font-bold text-xmas-gold mb-4 border-b border-xmas-gold/20 pb-3 flex items-center justify-between">
+                        <span><i class="fa-solid fa-user-plus text-xmas-red mr-2"></i> Register New Guest</span>
+                        <span class="text-xs text-xmas-cream/70 font-normal">Generates automatic ticket ID</span>
+                    </h2>
+
+                    <form onsubmit="handleRegisterGuest(event)" class="space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-xmas-gold uppercase mb-1">Guest Full Name *</label>
+                                <input type="text" id="regName" required placeholder="e.g. Santa Claus" 
+                                    class="w-full bg-xmas-darkgreen border border-xmas-gold/40 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-xmas-gold text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-xmas-gold uppercase mb-1">Email Address *</label>
+                                <input type="email" id="regEmail" required placeholder="santa@northpole.com" 
+                                    class="w-full bg-xmas-darkgreen border border-xmas-gold/40 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-xmas-gold text-sm">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-xmas-gold uppercase mb-1">Department / Table #</label>
+                                <input type="text" id="regDept" placeholder="e.g. IT Dept / Table 04" 
+                                    class="w-full bg-xmas-darkgreen border border-xmas-gold/40 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-xmas-gold text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-xmas-gold uppercase mb-1">Custom Ticket ID (Optional)</label>
+                                <input type="text" id="regTicketId" placeholder="Auto-generated if empty" 
+                                    class="w-full bg-xmas-darkgreen border border-xmas-gold/40 rounded-xl px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:border-xmas-gold text-sm uppercase">
+                            </div>
+                        </div>
+
+                        <div class="pt-2 flex gap-3">
+                            <button type="submit" class="flex-1 bg-gradient-to-r from-xmas-red to-xmas-darkred hover:from-red-600 hover:to-xmas-red text-white font-bold py-3 px-6 rounded-xl shadow-lg transition text-sm flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-gift"></i> Create & Register Guest
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Admin Action Tools (Import/Export & Reset) -->
+                <div class="lg:col-span-5 bg-xmas-cardBg border-2 border-xmas-gold/40 rounded-3xl p-6 shadow-2xl flex flex-col justify-between">
+                    <div>
+                        <h2 class="text-xl font-bold text-xmas-gold mb-4 border-b border-xmas-gold/20 pb-3 flex items-center gap-2">
+                            <i class="fa-solid fa-sliders"></i> Data Controls & CSV Export
+                        </h2>
+                        <p class="text-xs text-gray-300 mb-6 leading-relaxed">
+                            Easily export attendance data for post-party reporting, bulk add sample test data, or clear system memory.
+                        </p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <button onclick="exportGuestCSV()" class="w-full bg-emerald-700 hover:bg-emerald-600 text-white font-bold py-2.5 px-4 rounded-xl shadow transition text-sm flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-file-csv"></i> Export Attendance Log (CSV)
+                        </button>
+                        
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="seedSampleGuests()" class="bg-xmas-darkgreen hover:bg-xmas-green border border-xmas-gold/50 text-xmas-gold font-bold py-2.5 px-3 rounded-xl transition text-xs flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-rotate-left"></i> Load Sample Data
+                            </button>
+                            <button onclick="clearAllData()" class="bg-red-950/60 hover:bg-red-900 border border-red-500/40 text-red-300 font-bold py-2.5 px-3 rounded-xl transition text-xs flex items-center justify-center gap-2">
+                                <i class="fa-solid fa-trash-can"></i> Reset All Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Guest List Table -->
+            <div class="bg-xmas-cardBg border-2 border-xmas-gold/40 rounded-3xl p-6 shadow-2xl overflow-hidden">
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+                    <div>
+                        <h2 class="text-xl font-bold text-xmas-gold flex items-center gap-2">
+                            <i class="fa-solid fa-address-book text-xmas-red"></i> Christmas Guest List
+                        </h2>
+                        <p class="text-xs text-gray-400">View ticket details, generate QR passes, and send email invitations.</p>
+                    </div>
+
+                    <!-- Search Input -->
+                    <div class="relative w-full sm:w-72">
+                        <input type="text" id="tableSearchInput" oninput="renderGuestTable()" placeholder="Search guest name, email or ID..." 
+                            class="w-full bg-xmas-darkgreen border border-xmas-gold/40 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-xmas-gold">
+                        <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-xmas-gold/60 text-xs"></i>
+                    </div>
+                </div>
+
+                <!-- Table Container -->
+                <div class="overflow-x-auto rounded-xl border border-xmas-gold/20">
+                    <table class="w-full text-left text-sm text-gray-200">
+                        <thead class="bg-xmas-darkgreen text-xmas-gold font-bold text-xs uppercase tracking-wider border-b border-xmas-gold/30">
+                            <tr>
+                                <th class="py-3 px-4">Guest Info</th>
+                                <th class="py-3 px-4">Ticket ID</th>
+                                <th class="py-3 px-4">Dept / Table</th>
+                                <th class="py-3 px-4">Status</th>
+                                <th class="py-3 px-4">Check-In Time</th>
+                                <th class="py-3 px-4 text-center">Actions / Invitation</th>
+                            </tr>
+                        </thead>
+                        <tbody id="guestTableBody" class="divide-y divide-xmas-gold/10">
+                            <!-- Rows populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="mt-auto border-t border-xmas-gold/20 bg-xmas-darkgreen/90 py-4 text-center text-xs text-xmas-cream/60">
+        <p>🎄 Grand Holiday Gala Attendance & QR Management System • Crafted for Festive Celebration ✨</p>
+    </footer>
+
+    <!-- ====================================================================== -->
+    <!-- MODAL 1: TICKET QR PREVIEW & EMAIL DISPATCHER -->
+    <!-- ====================================================================== -->
+    <div id="ticketModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-xmas-cardBg border-2 border-xmas-gold rounded-3xl max-w-lg w-full p-6 shadow-2xl relative space-y-6">
+            
+            <button onclick="closeModal('ticketModal')" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-xmas-darkgreen text-xmas-gold hover:text-white flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <!-- Modal Header -->
+            <div class="text-center">
+                <span class="text-3xl">🎟️</span>
+                <h3 class="font-festive text-3xl text-xmas-gold font-bold">Holiday Party Pass</h3>
+                <p class="text-xs text-gray-300">Scan at entrance for entry</p>
+            </div>
+
+            <!-- Ticket Card Box -->
+            <div id="printableTicket" class="bg-gradient-to-b from-xmas-darkred via-xmas-red to-xmas-darkred border-2 border-xmas-gold rounded-2xl p-6 text-center text-white relative shadow-xl overflow-hidden">
+                <div class="absolute -left-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-xmas-cardBg rounded-full border border-xmas-gold"></div>
+                <div class="absolute -right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-xmas-cardBg rounded-full border border-xmas-gold"></div>
+
+                <p class="text-xs font-bold tracking-widest uppercase text-xmas-gold mb-1">Official Party Invitation</p>
+                <h4 id="modalGuestName" class="text-2xl font-black text-white">--</h4>
+                <p id="modalGuestEmail" class="text-xs text-xmas-cream opacity-80">--</p>
+
+                <!-- QR Code Rendering Container -->
+                <div class="my-5 flex justify-center">
+                    <div class="p-3 bg-white rounded-xl shadow-lg border-2 border-xmas-gold inline-block">
+                        <div id="modalQrCodeContainer"></div>
+                    </div>
+                </div>
+
+                <div class="inline-block bg-black/40 backdrop-blur px-4 py-1.5 rounded-full border border-xmas-gold/50">
+                    <span class="text-xs text-gray-300">ID: </span>
+                    <span id="modalTicketId" class="font-mono text-xmas-gold font-bold">--</span>
+                </div>
+                <p id="modalGuestDept" class="text-xs text-xmas-cream/90 mt-2 font-medium">--</p>
+            </div>
+
+            <!-- Email Invitation Action Section -->
+            <div class="bg-xmas-darkgreen/60 border border-xmas-gold/30 rounded-2xl p-4 space-y-3">
+                <h5 class="text-xs font-bold uppercase text-xmas-gold flex items-center justify-between">
+                    <span class="flex items-center gap-1.5"><i class="fa-solid fa-envelope"></i> Send Ticket & QR Code</span>
+                    <span class="text-[10px] text-gray-400 font-normal">Choose Method Below</span>
+                </h5>
+                <p class="text-xs text-gray-300">Choose how to deliver the pass and QR code image to your guest:</p>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <!-- Download Pass Image Button -->
+                    <button onclick="downloadQrTicketPass()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 px-3 rounded-xl shadow transition text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-download"></i> Download Ticket Image
+                    </button>
+                    <!-- EmailJS API Send Button -->
+                    <button onclick="sendDirectEmailJS()" class="w-full bg-xmas-gold hover:bg-yellow-400 text-xmas-darkgreen font-extrabold py-2.5 px-3 rounded-xl shadow transition text-xs flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-paper-plane"></i> Send QR via Email API
+                    </button>
+                </div>
+
+                <div class="flex gap-2 pt-1 border-t border-xmas-gold/20">
+                    <button onclick="triggerEmailInvitation()" class="flex-1 bg-xmas-darkgreen hover:bg-xmas-green border border-xmas-gold/40 text-xmas-cream font-bold py-2 px-3 rounded-xl transition text-xs flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-arrow-up-right-from-square text-[10px]"></i> Open Mail Client
+                    </button>
+                    <button onclick="copyTicketPassLink()" class="bg-xmas-darkgreen hover:bg-xmas-green border border-xmas-gold/40 text-xmas-cream font-bold py-2 px-3 rounded-xl transition text-xs flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-copy text-[10px]"></i> Copy Details
+                    </button>
+                </div>
+                <p class="text-[10px] text-gray-400 text-center italic">* Standard email client links (`mailto:`) cannot attach image files directly due to web browser security rules. Use "Download Ticket Image" to attach manually, or use "Send QR via Email API" for automatic direct email dispatch with QR code embedded.</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================================================================== -->
+    <!-- MODAL 2: EMAILJS CONFIGURATION / DISPATCH SETTINGS -->
+    <!-- ====================================================================== -->
+    <div id="emailJsModal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-xmas-cardBg border-2 border-xmas-gold rounded-3xl max-w-md w-full p-6 shadow-2xl relative space-y-4">
+            
+            <button onclick="closeModal('emailJsModal')" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-xmas-darkgreen text-xmas-gold hover:text-white flex items-center justify-center">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+            <div class="text-center">
+                <span class="text-3xl">📧</span>
+                <h3 class="font-festive text-2xl text-xmas-gold font-bold">Email API Dispatcher</h3>
+                <p class="text-xs text-gray-300">Embed QR code image data into automated email</p>
+            </div>
+
+            <div class="space-y-3 text-xs">
+                <div>
+                    <label class="block text-xmas-gold font-semibold uppercase mb-1">EmailJS Public Key (Optional)</label>
+                    <input type="text" id="emailjsPublicKey" placeholder="e.g. user_xxx (leave empty to simulate send)" 
+                        class="w-full bg-xmas-darkgreen border border-xmas-gold/40 rounded-xl px-3 py-2 text-white text-xs">
+                </div>
+                <div>
+                    <label class="block text-xmas-gold font-semibold uppercase mb-1">Service ID</label>
+                    <input type="text" id="emailjsServiceId" placeholder="e.g. service_xmas" 
+                        class="w-full bg-xmas-darkgreen border border-xmas-gold/40 rounded-xl px-3 py-2 text-white text-xs">
+                </div>
+                <div>
+                    <label class="block text-xmas-gold font-semibold uppercase mb-1">Template ID</label>
+                    <input type="text" id="emailjsTemplateId" placeholder="e.g. template_ticket" 
+                        class="w-full bg-xmas-darkgreen border border-xmas-gold/40 rounded-xl px-3 py-2 text-white text-xs">
+                </div>
+            </div>
+
+            <div class="bg-black/30 p-3 rounded-xl border border-xmas-gold/20 text-[11px] text-gray-300">
+                <p class="font-semibold text-xmas-gold mb-1">Passed Parameters:</p>
+                <ul class="list-disc list-inside space-y-0.5 font-mono text-[10px]">
+                    <li>to_name: <span id="paramName" class="text-white"></span></li>
+                    <li>to_email: <span id="paramEmail" class="text-white"></span></li>
+                    <li>ticket_id: <span id="paramTicket" class="text-white"></span></li>
+                    <li>qr_code_image: <span class="text-emerald-400">&lt;Base64 PNG Image Data URL&gt;</span></li>
+                </ul>
+            </div>
+
+            <button onclick="executeEmailJsSend()" class="w-full bg-xmas-red hover:bg-red-600 text-white font-bold py-2.5 px-4 rounded-xl shadow transition text-xs flex items-center justify-center gap-2">
+                <i class="fa-solid fa-paper-plane"></i> Send Email with Embedded QR
+            </button>
+        </div>
+    </div>
+
+    <!-- Include html2canvas for ticket PNG rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <!-- ====================================================================== -->
+    <!-- JAVASCRIPT LOGIC -->
+    <!-- ====================================================================== -->
+    <script>
+        // Default Sample Guest Data
+        const SAMPLE_GUESTS = [
+            { id: "TKT-XMAS-101", name: "Clara Stahlbaum", email: "clara@nutcracker.org", dept: "Executive / Table 01", checkedIn: false, checkInTime: null },
+            { id: "TKT-XMAS-102", name: "Ebenezer Scrooge", email: "scrooge@carol.com", dept: "Finance / Table 05", checkedIn: true, checkInTime: "07:15 PM" },
+            { id: "TKT-XMAS-103", name: "Buddy The Elf", email: "buddy@northpole.com", dept: "Toy Dept / Table 02", checkedIn: false, checkInTime: null },
+            { id: "TKT-XMAS-104", name: "George Bailey", email: "george@bedfordfalls.com", dept: "Operations / Table 03", checkedIn: false, checkInTime: null }
+        ];
+
+        // State Variables
+        let guests = [];
+        let html5QrcodeScanner = null;
+        let isScanning = false;
+        let currentSelectedGuest = null;
+
+        // Sound Synthesis (Web Audio API for zero external assets dependency)
+        function playFestiveChime() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+                notes.forEach((freq, idx) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.value = freq;
+                    gain.gain.setValueAtTime(0.1, ctx.currentTime + idx * 0.1);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.1 + 0.3);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.start(ctx.currentTime + idx * 0.1);
+                    osc.stop(ctx.currentTime + idx * 0.1 + 0.3);
+                });
+            } catch(e) { console.log('Audio not supported', e); }
+        }
+
+        function playErrorSound() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, ctx.currentTime);
+                osc.frequency.linearRampToValueAtTime(120, ctx.currentTime + 0.3);
+                gain.gain.setValueAtTime(0.15, ctx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.start();
+                osc.stop(ctx.currentTime + 0.3);
+            } catch(e) {}
+        }
+
+        // Initialize App on DOM Load
+        window.addEventListener('DOMContentLoaded', () => {
+            loadGuestsFromStorage();
+            updateDashboardStats();
+            renderGuestTable();
+            renderRecentActivity();
+            checkSecurityContext();
+            populateCameraDevices();
+        });
+
+        // Warn user if opened on http:// outside localhost
+        function checkSecurityContext() {
+            if (location.protocol !== 'https:' && location.hostname !== 'localhost' && location.hostname !== '127.0.0.1') {
+                const banner = document.getElementById('httpWarningBanner');
+                if (banner) banner.classList.remove('hidden');
+            }
+        }
+
+        // List available cameras into select dropdown
+        async function populateCameraDevices() {
+            try {
+                const devices = await Html5Qrcode.getCameras();
+                const select = document.getElementById('cameraSelect');
+                if (devices && devices.length > 0) {
+                    select.innerHTML = '<option value="">Auto-Detect Camera (Back Camera preferred)</option>';
+                    devices.forEach(device => {
+                        const opt = document.createElement('option');
+                        opt.value = device.id;
+                        opt.innerText = device.label || `Camera ${select.options.length}`;
+                        select.appendChild(opt);
+                    });
+                }
+            } catch (err) {
+                console.log("Could not pre-list camera devices:", err);
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // DATA PERSISTENCE & MANAGEMENT
+        // ----------------------------------------------------------------------
+        function loadGuestsFromStorage() {
+            const stored = localStorage.getItem('xmas_party_guests');
+            if (stored) {
+                try {
+                    guests = JSON.parse(stored);
+                } catch(e) {
+                    guests = [...SAMPLE_GUESTS];
+                }
+            } else {
+                guests = [...SAMPLE_GUESTS];
+                saveGuestsToStorage();
+            }
+        }
+
+        function saveGuestsToStorage() {
+            localStorage.setItem('xmas_party_guests', JSON.stringify(guests));
+            updateDashboardStats();
+        }
+
+        function seedSampleGuests() {
+            guests = [...SAMPLE_GUESTS];
+            saveGuestsToStorage();
+            renderGuestTable();
+            renderRecentActivity();
+            alert('🎄 Sample guest list restored!');
+        }
+
+        function clearAllData() {
+            if (confirm('Are you sure you want to clear all guest records?')) {
+                guests = [];
+                saveGuestsToStorage();
+                renderGuestTable();
+                renderRecentActivity();
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // STATS & DASHBOARD UPDATES
+        // ----------------------------------------------------------------------
+        function updateDashboardStats() {
+            const total = guests.length;
+            const checkedIn = guests.filter(g => g.checkedIn).length;
+            const pending = total - checkedIn;
+
+            document.getElementById('statTotalGuests').innerText = total;
+            document.getElementById('statCheckedIn').innerText = checkedIn;
+            document.getElementById('statPending').innerText = pending;
+        }
+
+        // ----------------------------------------------------------------------
+        // NAVIGATION & TABS
+        // ----------------------------------------------------------------------
+        function switchTab(tab) {
+            const staffSection = document.getElementById('staffSection');
+            const adminSection = document.getElementById('adminSection');
+            const tabStaffBtn = document.getElementById('tabStaffBtn');
+            const tabAdminBtn = document.getElementById('tabAdminBtn');
+
+            if (tab === 'staff') {
+                staffSection.classList.remove('hidden');
+                adminSection.classList.add('hidden');
+                tabStaffBtn.className = "px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 text-xmas-gold bg-xmas-green shadow";
+                tabAdminBtn.className = "px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 text-gray-300 hover:text-white";
+            } else {
+                staffSection.classList.add('hidden');
+                adminSection.classList.remove('hidden');
+                tabAdminBtn.className = "px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 text-xmas-gold bg-xmas-green shadow";
+                tabStaffBtn.className = "px-5 py-2.5 rounded-xl font-bold text-sm transition-all flex items-center gap-2 text-gray-300 hover:text-white";
+                // Stop camera if navigating away
+                stopScanner();
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // GUEST REGISTRATION & ADMIN
+        // ----------------------------------------------------------------------
+        function handleRegisterGuest(e) {
+            e.preventDefault();
+            const name = document.getElementById('regName').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
+            const dept = document.getElementById('regDept').value.trim() || 'General Guest';
+            let ticketId = document.getElementById('regTicketId').value.trim().toUpperCase();
+
+            if (!name || !email) return;
+
+            if (!ticketId) {
+                ticketId = 'TKT-XMAS-' + Math.floor(100 + Math.random() * 900);
+            }
+
+            // Check duplicate
+            if (guests.some(g => g.id === ticketId)) {
+                alert('A guest with this Ticket ID already exists!');
+                return;
+            }
+
+            const newGuest = {
+                id: ticketId,
+                name: name,
+                email: email,
+                dept: dept,
+                checkedIn: false,
+                checkInTime: null
+            };
+
+            guests.unshift(newGuest);
+            saveGuestsToStorage();
+            renderGuestTable();
+
+            // Clear Form
+            document.getElementById('regName').value = '';
+            document.getElementById('regEmail').value = '';
+            document.getElementById('regDept').value = '';
+            document.getElementById('regTicketId').value = '';
+
+            // Open QR Modal directly
+            openTicketModal(ticketId);
+        }
+
+        function renderGuestTable() {
+            const tbody = document.getElementById('guestTableBody');
+            const search = (document.getElementById('tableSearchInput')?.value || '').toLowerCase();
+            
+            const filtered = guests.filter(g => 
+                g.name.toLowerCase().includes(search) || 
+                g.email.toLowerCase().includes(search) || 
+                g.id.toLowerCase().includes(search)
+            );
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="py-8 text-center text-gray-400">
+                            No guests found matching your criteria.
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(g => `
+                <tr class="hover:bg-xmas-green/30 transition-colors">
+                    <td class="py-3 px-4">
+                        <div class="font-bold text-white">${escapeHtml(g.name)}</div>
+                        <div class="text-xs text-gray-400">${escapeHtml(g.email)}</div>
+                    </td>
+                    <td class="py-3 px-4 font-mono font-bold text-xmas-gold">${g.id}</td>
+                    <td class="py-3 px-4 text-xs text-gray-300">${escapeHtml(g.dept)}</td>
+                    <td class="py-3 px-4">
+                        ${g.checkedIn 
+                            ? `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">✓ Checked-In</span>` 
+                            : `<span class="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">⏳ Pending</span>`}
+                    </td>
+                    <td class="py-3 px-4 text-xs text-gray-400">${g.checkInTime || '--'}</td>
+                    <td class="py-3 px-4 text-center">
+                        <div class="flex items-center justify-center gap-2">
+                            <button onclick="openTicketModal('${g.id}')" title="View & Email QR Ticket" 
+                                class="bg-xmas-gold/20 hover:bg-xmas-gold text-xmas-gold hover:text-xmas-darkgreen p-2 rounded-lg transition border border-xmas-gold/40 text-xs font-semibold flex items-center gap-1">
+                                <i class="fa-solid fa-qrcode"></i> Ticket / Email
+                            </button>
+                            <button onclick="toggleCheckInStatus('${g.id}')" title="Toggle Attendance"
+                                class="p-2 rounded-lg transition border text-xs ${g.checkedIn ? 'bg-red-500/20 text-red-300 border-red-500/30 hover:bg-red-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30 hover:bg-emerald-500/40'}">
+                                <i class="fa-solid ${g.checkedIn ? 'fa-user-xmark' : 'fa-user-check'}"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function toggleCheckInStatus(ticketId) {
+            const guest = guests.find(g => g.id === ticketId);
+            if (guest) {
+                guest.checkedIn = !guest.checkedIn;
+                guest.checkInTime = guest.checkedIn ? new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : null;
+                saveGuestsToStorage();
+                renderGuestTable();
+                renderRecentActivity();
+            }
+        }
+
+        // ----------------------------------------------------------------------
+        // QR MODAL & EMAILER LOGIC
+        // ----------------------------------------------------------------------
+        function openTicketModal(ticketId) {
+            const guest = guests.find(g => g.id === ticketId);
+            if (!guest) return;
+
+            currentSelectedGuest = guest;
+
+            document.getElementById('modalGuestName').innerText = guest.name;
+            document.getElementById('modalGuestEmail').innerText = guest.email;
+            document.getElementById('modalTicketId').innerText = guest.id;
+            document.getElementById('modalGuestDept').innerText = `Department/Table: ${guest.dept}`;
+
+            // Generate QR Code
+            const qrContainer = document.getElementById('modalQrCodeContainer');
+            qrContainer.innerHTML = '';
+            
+            new QRCode(qrContainer, {
+                text: guest.id,
+                width: 160,
+                height: 160,
+                colorDark : "#0B3B24",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+
+            document.getElementById('ticketModal').classList.remove('hidden');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function triggerEmailInvitation() {
+            if (!currentSelectedGuest) return;
+
+            const qrImg = document.querySelector('#modalQrCodeContainer img');
+            const qrSrc = qrImg ? qrImg.src : '';
+
+            const subject = encodeURIComponent(`🎄 Your Christmas Party Ticket & QR Pass (${currentSelectedGuest.id})`);
+            const bodyText = `Ho Ho Ho ${currentSelectedGuest.name}! 🎅\n\nYou are cordially invited to the Grand Christmas Gala Party!\n\nYour Ticket Details:\n- Guest Name: ${currentSelectedGuest.name}\n- Ticket ID: ${currentSelectedGuest.id}\n- Table / Dept: ${currentSelectedGuest.dept}\n\n[NOTE FOR GUEST]: Please bring your Ticket ID (${currentSelectedGuest.id}) or attach/save your downloaded QR code pass at entrance check-in.\n\nSee you at the party! 🎁✨`;
+
+            window.location.href = `mailto:${currentSelectedGuest.email}?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+        }
+
+        // Helper: Download Ticket Card as Image File
+        function downloadQrTicketPass() {
+            if (!currentSelectedGuest) return;
+            const element = document.getElementById('printableTicket');
+
+            html2canvas(element, { backgroundColor: null, scale: 2 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = `Christmas_Pass_${currentSelectedGuest.name.replace(/\s+/g, '_')}_${currentSelectedGuest.id}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            }).catch(err => {
+                // Fallback: Download raw QR code image if html2canvas fails
+                const qrImg = document.querySelector('#modalQrCodeContainer img');
+                if (qrImg) {
+                    const link = document.createElement('a');
+                    link.download = `QR_Code_${currentSelectedGuest.id}.png`;
+                    link.href = qrImg.src;
+                    link.click();
+                } else {
+                    alert('Could not render image file for download.');
+                }
+            });
+        }
+
+        // Helper: Trigger EmailJS Dispatcher Modal
+        function sendDirectEmailJS() {
+            if (!currentSelectedGuest) return;
+
+            document.getElementById('paramName').innerText = currentSelectedGuest.name;
+            document.getElementById('paramEmail').innerText = currentSelectedGuest.email;
+            document.getElementById('paramTicket').innerText = currentSelectedGuest.id;
+
+            document.getElementById('emailJsModal').classList.remove('hidden');
+        }
+
+        function executeEmailJsSend() {
+            if (!currentSelectedGuest) return;
+
+            const qrImg = document.querySelector('#modalQrCodeContainer img');
+            const qrDataBase64 = qrImg ? qrImg.src : '';
+
+            const publicKey = document.getElementById('emailjsPublicKey').value.trim();
+            const serviceId = document.getElementById('emailjsServiceId').value.trim();
+            const templateId = document.getElementById('emailjsTemplateId').value.trim();
+
+            if (publicKey && serviceId && templateId && window.emailjs) {
+                // Execute actual EmailJS send
+                emailjs.init(publicKey);
+                emailjs.send(serviceId, templateId, {
+                    to_name: currentSelectedGuest.name,
+                    to_email: currentSelectedGuest.email,
+                    ticket_id: currentSelectedGuest.id,
+                    dept: currentSelectedGuest.dept,
+                    qr_code_image: qrDataBase64
+                }).then(() => {
+                    alert(`✅ Email successfully dispatched to ${currentSelectedGuest.email} with embedded QR Code!`);
+                    closeModal('emailJsModal');
+                }).catch(err => {
+                    alert(`❌ Failed to send via EmailJS API: ${err.text || err.message}`);
+                });
+            } else {
+                // Simulate send response
+                alert(`🎁 [DEMO / SIMULATION MODE]\n\nDirect Email API Request Simulated!\n- Sent To: ${currentSelectedGuest.email}\n- Ticket ID: ${currentSelectedGuest.id}\n- Included Data: QR Base64 PNG payload attached.\n\n(Tip: Enter your EmailJS credentials above to enable live real-time delivery).`);
+                closeModal('emailJsModal');
+            }
+        }
+
+        function copyTicketPassLink() {
+            if (!currentSelectedGuest) return;
+            const textToCopy = `🎄 CHRISTMAS PARTY TICKET 🎟️\nGuest: ${currentSelectedGuest.name}\nTicket ID: ${currentSelectedGuest.id}\nDept/Table: ${currentSelectedGuest.dept}\nEmail: ${currentSelectedGuest.email}`;
+            
+            // Fallback copy method for iframe compatibility
+            const dummy = document.createElement("textarea");
+            document.body.appendChild(dummy);
+            dummy.value = textToCopy;
+            dummy.select();
+            document.execCommand("copy");
+            document.body.removeChild(dummy);
+
+            alert('📋 Ticket invitation details copied to clipboard!');
+        }
+
+        // ----------------------------------------------------------------------
+        // STAFF QR SCANNER & MANUAL VERIFICATION
+        // ----------------------------------------------------------------------
+        async function startScanner() {
+            if (isScanning) return;
+
+            document.getElementById('scannerPlaceholder').classList.add('hidden');
+            const badge = document.getElementById('scannerStatusBadge');
+            badge.innerText = 'Initializing...';
+            badge.className = 'px-3 py-1 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-full text-xs font-semibold';
+
+            const selectedCameraId = document.getElementById('cameraSelect').value;
+            // Prefer selected camera ID, fallback to environment facing mode
+            const cameraConfig = selectedCameraId ? selectedCameraId : { facingMode: "environment" };
+
+            try {
+                if (!html5QrcodeScanner) {
+                    html5QrcodeScanner = new Html5Qrcode("reader");
+                }
+
+                await html5QrcodeScanner.start(
+                    cameraConfig,
+                    {
+                        fps: 10,
+                        qrbox: { width: 250, height: 250 }
+                    },
+                    onScanSuccess,
+                    onScanFailure
+                );
+
+                isScanning = true;
+                badge.innerText = 'Camera Active';
+                badge.className = 'px-3 py-1 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-full text-xs font-semibold';
+
+                document.getElementById('startScanBtn').disabled = true;
+                document.getElementById('startScanBtn').classList.add('opacity-50');
+                document.getElementById('stopScanBtn').disabled = false;
+                document.getElementById('stopScanBtn').classList.remove('opacity-50', 'cursor-not-allowed');
+
+            } catch (err) {
+                console.error("Camera access failed", err);
+                badge.innerText = 'Camera Error';
+                badge.className = 'px-3 py-1 bg-red-500/20 text-red-300 border border-red-500/30 rounded-full text-xs font-semibold';
+                document.getElementById('scannerPlaceholder').classList.remove('hidden');
+
+                if (location.protocol !== 'https:' && location.hostname !== 'localhost') {
+                    alert('Camera access failed. Web browsers block live camera on HTTP sites. Please use HTTPS or upload a QR image/photo below.');
+                } else {
+                    alert('Unable to access camera. Please verify camera permissions in browser settings or try selecting a specific camera from the dropdown.');
+                }
+            }
+        }
+
+        function stopScanner() {
+            if (html5QrcodeScanner && isScanning) {
+                html5QrcodeScanner.stop().then(() => {
+                    isScanning = false;
+                    document.getElementById('reader').innerHTML = '';
+                    document.getElementById('scannerPlaceholder').classList.remove('hidden');
+                    
+                    const badge = document.getElementById('scannerStatusBadge');
+                    badge.innerText = 'Camera Stopped';
+                    badge.className = 'px-3 py-1 bg-yellow-500/20 text-yellow-300 border border-yellow-500/30 rounded-full text-xs font-semibold';
+
+                    document.getElementById('startScanBtn').disabled = false;
+                    document.getElementById('startScanBtn').classList.remove('opacity-50');
+                    document.getElementById('stopScanBtn').disabled = true;
+                    document.getElementById('stopScanBtn').classList.add('opacity-50', 'cursor-not-allowed');
+                }).catch(err => console.log(err));
+            }
+        }
+
+        // Scan QR from static image file upload fallback
+        async function handleQrFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const scanner = new Html5Qrcode("reader");
+            try {
+                const decodedText = await scanner.scanFile(file, true);
+                processCheckIn(decodedText.trim());
+            } catch (err) {
+                playErrorSound();
+                alert("Could not detect a valid QR code in the selected image file.");
+            } finally {
+                event.target.value = ''; // Reset input
+            }
+        }
+
+        function onScanSuccess(decodedText, decodedResult) {
+            // Process scanned code
+            processCheckIn(decodedText.trim());
+        }
+
+        function onScanFailure(error) {
+            // Silently ignore frame scan misses
+        }
+
+        function handleManualCheckIn(e) {
+            e.preventDefault();
+            const input = document.getElementById('manualTicketInput');
+            const val = input.value.trim().toUpperCase();
+            if (val) {
+                processCheckIn(val);
+                input.value = '';
+            }
+        }
+
+        function processCheckIn(ticketId) {
+            const guest = guests.find(g => g.id.toUpperCase() === ticketId.toUpperCase());
+
+            const defaultCard = document.getElementById('resultContainerDefault');
+            const resultCard = document.getElementById('resultCard');
+            const iconBox = document.getElementById('resultIcon');
+            const titleEl = document.getElementById('resultTitle');
+            const msgEl = document.getElementById('resultMessage');
+
+            defaultCard.classList.add('hidden');
+            resultCard.classList.remove('hidden');
+
+            if (!guest) {
+                // Invalid Ticket
+                playErrorSound();
+                resultCard.className = "p-6 rounded-2xl text-center space-y-4 border-2 bg-red-950/60 border-red-500 red-glow transition-all";
+                iconBox.className = "w-16 h-16 mx-auto rounded-full flex items-center justify-center text-3xl font-extrabold shadow-md bg-red-500 text-white";
+                iconBox.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+                
+                titleEl.innerText = "Invalid QR Code!";
+                titleEl.className = "text-2xl font-black text-red-400";
+                msgEl.innerText = `No guest record found matching ID: ${ticketId}`;
+
+                document.getElementById('resultDetails').classList.add('hidden');
+                return;
+            }
+
+            // Populate Details
+            document.getElementById('resultDetails').classList.remove('hidden');
+            document.getElementById('resGuestName').innerText = guest.name;
+            document.getElementById('resTicketId').innerText = guest.id;
+            document.getElementById('resDept').innerText = guest.dept;
+
+            if (guest.checkedIn) {
+                // Already Checked In Warning
+                playErrorSound();
+                resultCard.className = "p-6 rounded-2xl text-center space-y-4 border-2 bg-amber-950/60 border-amber-500 shadow-lg transition-all";
+                iconBox.className = "w-16 h-16 mx-auto rounded-full flex items-center justify-center text-3xl font-extrabold shadow-md bg-amber-500 text-black";
+                iconBox.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+
+                titleEl.innerText = "Already Checked-In!";
+                titleEl.className = "text-2xl font-black text-amber-400";
+                msgEl.innerText = `Guest was already checked-in at ${guest.checkInTime}`;
+                document.getElementById('resTime').innerText = guest.checkInTime;
+
+            } else {
+                // SUCCESS CHECK-IN!
+                guest.checkedIn = true;
+                guest.checkInTime = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                saveGuestsToStorage();
+                renderGuestTable();
+                renderRecentActivity();
+
+                // Sound & Confetti Effect
+                playFestiveChime();
+                triggerConfetti();
+
+                resultCard.className = "p-6 rounded-2xl text-center space-y-4 border-2 bg-emerald-950/60 border-emerald-400 green-glow transition-all";
+                iconBox.className = "w-16 h-16 mx-auto rounded-full flex items-center justify-center text-3xl font-extrabold shadow-md bg-emerald-500 text-white";
+                iconBox.innerHTML = '<i class="fa-solid fa-check"></i>';
+
+                titleEl.innerText = "Welcome to the Gala!";
+                titleEl.className = "text-2xl font-black text-emerald-400";
+                msgEl.innerText = "Entry approved. Merry Christmas! 🎄✨";
+                document.getElementById('resTime').innerText = guest.checkInTime;
+            }
+        }
+
+        function renderRecentActivity() {
+            const container = document.getElementById('recentActivityList');
+            const checkedInGuests = guests.filter(g => g.checkedIn).reverse();
+
+            if (checkedInGuests.length === 0) {
+                container.innerHTML = '<p class="text-xs text-gray-500 text-center py-4">No check-in activity recorded yet.</p>';
+                return;
+            }
+
+            container.innerHTML = checkedInGuests.slice(0, 5).map(g => `
+                <div class="bg-black/30 border border-xmas-gold/20 rounded-xl p-2.5 flex items-center justify-between text-xs">
+                    <div>
+                        <p class="font-bold text-white">${escapeHtml(g.name)}</p>
+                        <p class="text-gray-400 font-mono text-[10px]">${g.id}</p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-emerald-400 font-semibold">${g.checkInTime}</span>
+                        <p class="text-[10px] text-gray-400">${escapeHtml(g.dept)}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Festive Confetti burst
+        function triggerConfetti() {
+            if (typeof confetti === 'function') {
+                confetti({
+                    particleCount: 80,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#D42426', '#F8B229', '#165B33', '#ffffff']
+                });
+            }
+        }
+
+        // Export Data to CSV
+        function exportGuestCSV() {
+            if (guests.length === 0) {
+                alert('No guest data available to export.');
+                return;
+            }
+
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "Ticket ID,Guest Name,Email,Department/Table,Status,CheckIn Time\n";
+
+            guests.forEach(g => {
+                const status = g.checkedIn ? "Checked-In" : "Pending";
+                const time = g.checkInTime ? g.checkInTime : "";
+                csvContent += `"${g.id}","${g.name}","${g.email}","${g.dept}","${status}","${time}"\n`;
+            });
+
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", `Christmas_Party_Attendance_${new Date().toISOString().slice(0,10)}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        // Helper to escape HTML characters
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>"']/g, function(m) {
+                return {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                }[m];
+            });
+        }
+    </script>
+</body>
+</html>
