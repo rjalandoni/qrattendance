@@ -371,4 +371,146 @@
           '<td class="py-3 px-4 text-xs"><span class="font-semibold text-slate-700">' + g.type + '</span>' + (g.table ? '<div class="text-slate-400">' + g.table + '</div>' : '') + '</td>' +
           '<td class="py-3 px-4 text-xs">' + emailBadge + '</td>' +
           '<td class="py-3 px-4 text-xs">' + statusBadge + '</td>' +
-          '<td class="py-3 px-4 text-right space-x-1">'
+          '<td class="py-3 px-4 text-right space-x-1">' +
+            '<button onclick="toggleGuestCheckIn(\'' + g.id + '\')" class="px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-xs font-semibold">' + (g.checkedIn ? "Undo" : "Check In") + '</button>' +
+            '<button onclick="previewGuestFromTable(\'' + g.id + '\')" class="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-semibold">QR</button>' +
+            '<button onclick="removeGuest(\'' + g.id + '\')" class="px-2 py-1 rounded-lg text-slate-400 hover:text-red-600 text-xs">&times;</button>' +
+          '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    function renderRecentScans() {
+      const checked = guests.filter(g => g.checkedIn).slice(0, 6);
+      const box = document.getElementById("recentScansList");
+      if (!checked.length) {
+        box.innerHTML = "No check-ins recorded yet.";
+        return;
+      }
+      box.innerHTML = checked.map(g =>
+        '<div class="flex items-center justify-between py-2 px-3 rounded-xl bg-slate-50 border border-slate-100">' +
+          '<div><span class="font-semibold text-slate-800">' + g.name + '</span><span class="text-xs text-slate-400 ml-2 font-mono">' + g.id + '</span></div>' +
+          '<span class="text-xs font-bold text-emerald-700">' + g.checkInTime + '</span>' +
+        '</div>'
+      ).join("");
+    }
+
+    async function toggleGuestCheckIn(id) {
+      const g = guests.find(item => item.id === id);
+      if (!g) return;
+      g.checkedIn = !g.checkedIn;
+      g.checkInTime = g.checkedIn ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+      await pushGuestToCloud(g);
+    }
+
+    function triggerResend(id) {
+      const g = guests.find(item => item.id === id);
+      if (g) sendQrEmail(g);
+    }
+
+    function previewGuestFromTable(id) {
+      const g = guests.find(item => item.id === id);
+      if (!g) return;
+      renderPassPreview(g);
+      switchTab("register");
+    }
+
+    async function removeGuest(id) {
+      if (!confirm("Remove this guest from the cloud database?")) return;
+      await deleteGuestFromCloud(id);
+    }
+
+    function exportExcelFile() {
+      const rows = guests.map(g => ({
+        "Guest ID": g.id,
+        "Full Name": g.name,
+        "Email": g.email,
+        "Guest Type": g.type,
+        "Table / Dept": g.table || "",
+        "Email Sent": g.emailSent ? "Yes" : "No",
+        "Check-In Status": g.checkedIn ? "Checked In" : "Pending",
+        "Check-In Time": g.checkInTime || ""
+      }));
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Christmas_Guests");
+      XLSX.writeFile(wb, "Christmas_Party_2026_Attendance.xlsx");
+    }
+
+    function importExcelFile(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const wb = XLSX.read(e.target.result, { type: "binary" });
+        const sheet = wb.Sheets[wb.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(sheet);
+        let imported = 0;
+
+        for (const r of rows) {
+          const name = r["Full Name"] || r["Name"] || r["name"];
+          const email = r["Email"] || r["email"] || "";
+          if (!name) continue;
+
+          const existingId = r["Guest ID"] || ("XMAS-2026-" + Math.random().toString(36).substring(2, 6).toUpperCase());
+          const guest = {
+            id: String(existingId).trim(),
+            name: String(name).trim(),
+            email: String(email).trim(),
+            type: r["Guest Type"] || "Regular Guest",
+            table: r["Table / Dept"] || "",
+            checkedIn: String(r["Check-In Status"] || "").toLowerCase() === "checked in",
+            checkInTime: r["Check-In Time"] || "",
+            emailSent: String(r["Email Sent"] || "").toLowerCase() === "yes",
+            registeredAt: new Date().toISOString()
+          };
+          await pushGuestToCloud(guest);
+          imported++;
+        }
+        showToast("Imported & synced " + imported + " guests to cloud!", "success");
+        event.target.value = "";
+      };
+      reader.readAsBinaryString(file);
+    }
+
+    function switchTab(tab) {
+      ["register", "scanner", "dashboard"].forEach(t => {
+        document.getElementById("view-" + t).classList.toggle("hidden", t !== tab);
+        const btn = document.getElementById("tab-" + t);
+        if (t === tab) {
+          btn.className = "tab-btn px-4 py-2.5 text-sm font-semibold rounded-t-lg bg-slate-50 text-red-900 flex items-center gap-2 transition";
+        } else {
+          btn.className = "tab-btn px-4 py-2.5 text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-2 transition";
+        }
+      });
+      if (tab !== "scanner") stopCameraScanner();
+    }
+
+    function openEmailTemplateModal() {
+      document.getElementById("emailModal").classList.remove("hidden");
+    }
+
+    function copyTemplateHtml() {
+      const ta = document.getElementById("emailTemplateCode");
+      ta.select();
+      document.execCommand("copy");
+      showToast("EmailJS HTML template copied!", "success");
+    }
+
+    function showToast(msg, type) {
+      const box = document.getElementById("toastBox");
+      const el = document.createElement("div");
+      const colors = type === "success" ? "bg-emerald-800" : type === "warning" ? "bg-amber-700" : "bg-slate-800";
+      el.className = colors + " text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-lg transition-opacity";
+      el.textContent = msg;
+      box.appendChild(el);
+      setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 300); }, 3500);
+    }
+
+    lucide.createIcons();
+    persistLocalAndRender();
+    syncFromCloud(false);
+    setInterval(() => syncFromCloud(false), 4000);
+  </script>
+</body>
+</html>
