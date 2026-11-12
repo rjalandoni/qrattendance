@@ -146,13 +146,21 @@
                             <span class="text-xs uppercase tracking-widest text-goldLight font-semibold">Event Check-In Portal</span>
                             <span id="cloud-sync-badge" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-amber-900/80 text-amber-200 border border-amber-500/40 transition-colors">
                                 <span id="cloud-sync-dot" class="w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5 animate-pulse"></span>
-                                <span id="cloud-sync-text">Connecting Cloud DB...</span>
+                                <span id="cloud-sync-text">Connecting: qrattendance-39ba7...</span>
                             </span>
+                            <button type="button" onclick="forceCloudSync()" title="Force refresh & sync with qrattendance-39ba7" class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-white/10 hover:bg-white/20 text-goldLight border border-goldLight/30 transition">
+                                <i class="fa-solid fa-rotate"></i>
+                                <span>Sync Now</span>
+                            </button>
+                            <button type="button" id="btn-upload-local-cloud" onclick="uploadLocalGuestsToCloud()" class="hidden inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-goldLight hover:bg-amber-300 text-emeraldDark shadow transition">
+                                <i class="fa-solid fa-cloud-arrow-up"></i>
+                                <span id="upload-local-label">Upload Local Guests</span>
+                            </button>
                             <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-emerald-800/80 text-emerald-200 border border-emerald-600/40">
                                 <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5"></span>EmailJS Active
                             </span>
                         </div>
-                        <h1 class="font-serif text-xl sm:text-2xl font-bold tracking-tight text-white">Annual Christmas Party 2026</h1>
+                        <h1 class="font-serif text-xl sm:text-2xl font-bold tracking-tight text-white">Grand Christmas Party 2026</h1>
                     </div>
                 </div>
 
@@ -243,10 +251,11 @@
                                     </span>
                                     <select id="guest-type" class="w-full pl-9 pr-3 py-2.5 bg-slate-50 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emeraldDeep focus:border-emeraldDeep transition">
                                         <option value="Employee">Employee</option>
-                                        <option value="VIP">VIP Guest</option>
-                                        <option value="Plus-One">Plus-One</option>
-                                        <option value="Executive">Executive</option>
-                                        <option value="Vendor / Partner">Vendor / Partner</option>
+                                        <option value="VIP">VIP</option>
+                                        <option value="Plus One">Plus One</option>
+                                        <option value="Family">Family</option>
+                                        <option value="Performer">Performer</option>
+                                        <option value="Sponsor">Sponsor</option>
                                     </select>
                                 </div>
                             </div>
@@ -578,9 +587,10 @@
                             <option value="all">All Categories</option>
                             <option value="Employee">Employee</option>
                             <option value="VIP">VIP</option>
-                            <option value="Plus-One">Plus-One</option>
-                            <option value="Executive">Executive</option>
-                            <option value="Vendor / Partner">Vendor / Partner</option>
+                            <option value="Plus One">Plus One</option>
+                            <option value="Family">Family</option>
+                            <option value="Performer">Performer</option>
+                            <option value="Sponsor">Sponsor</option>
                         </select>
                     </div>
 
@@ -627,131 +637,28 @@
     </main>
 
     <!-- =================================================================== -->
-    <!-- EMAILJS TEMPLATE SETUP & HTML SNIPPET MODAL                         -->
-    <!-- =================================================================== -->
-    <div id="payload-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-2xl w-full overflow-hidden border border-slate-200 animate-fade-in">
-            <div class="bg-gradient-to-r from-emeraldDark via-emeraldDeep to-emeraldDark px-6 py-4 flex items-center justify-between text-white border-b-2 border-goldLight">
-                <div class="flex items-center gap-2.5">
-                    <i class="fa-solid fa-envelope-circle-check text-goldLight text-lg"></i>
-                    <div>
-                        <h3 class="font-bold text-base">EmailJS QR Image Setup (<code class="text-goldLight text-xs">template_n9u8619</code>)</h3>
-                        <p class="text-[11px] text-emerald-200">Ensure your EmailJS template renders the scannable QR image in Gmail &amp; Outlook</p>
-                    </div>
-                </div>
-                <button type="button" onclick="closePayloadModal()" class="text-emerald-200 hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <div class="p-6 space-y-4 max-h-[80vh] overflow-y-auto text-sm text-slate-700">
-                <div class="bg-amber-50 border border-amber-200 rounded-xl p-3.5 text-xs text-amber-900 flex items-start gap-2.5">
-                    <i class="fa-solid fa-lightbulb text-amber-600 mt-0.5 text-sm"></i>
-                    <div>
-                        <p class="font-semibold">Why HTTPS QR URLs are sent automatically:</p>
-                        <p class="mt-0.5">Gmail and Outlook block raw <code class="bg-white px-1 rounded">data:image/png;base64</code> attachments. This app sends a live HTTPS QR image URL in <code class="bg-white px-1 rounded font-bold">{{qr_code_url}}</code> plus a ready-to-render HTML card in <code class="bg-white px-1 rounded font-bold">{{qr_html}}</code> / <code class="bg-white px-1 rounded font-bold">{{message_html}}</code>.</p>
-                    </div>
-                </div>
-
-                <!-- Active Credentials Summary -->
-                <div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-xs">
-                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                        <span class="text-slate-400 block">Public Key</span>
-                        <code class="font-bold text-slate-800">kqIzEf-5-Noa9NWNR</code>
-                    </div>
-                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                        <span class="text-slate-400 block">Service ID</span>
-                        <code class="font-bold text-slate-800">service_h3hfprm</code>
-                    </div>
-                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-                        <span class="text-slate-400 block">Template ID</span>
-                        <code class="font-bold text-slate-800">template_n9u8619</code>
-                    </div>
-                </div>
-
-                <!-- Copy-Paste EmailJS HTML Template -->
-                <div>
-                    <div class="flex items-center justify-between mb-1.5">
-                        <label class="font-semibold text-slate-800 text-xs uppercase tracking-wider">Copy-Paste HTML for EmailJS Template Editor (<code class="lowercase font-mono">&lt;&gt; Source Code</code>)</label>
-                        <button type="button" onclick="copyEmailJsHtmlSnippet()" class="bg-emeraldDeep hover:bg-emeraldDark text-white text-xs font-medium px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 shadow-sm">
-                            <i class="fa-solid fa-copy text-goldLight"></i>
-                            <span>Copy HTML Template</span>
-                        </button>
-                    </div>
-                    <textarea id="emailjs-template-snippet" readonly rows="11" class="w-full font-mono text-xs bg-slate-900 text-emerald-300 p-3.5 rounded-xl border border-slate-700 focus:outline-none leading-relaxed">&lt;div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto; border: 2px solid #0f3d2e; border-radius: 16px; overflow: hidden;"&gt;
-  &lt;div style="background: #b91c1c; color: #ffffff; padding: 18px; text-align: center;"&gt;
-    &lt;p style="margin: 0; font-size: 11px; letter-spacing: 2px; color: #fbbf24; font-weight: bold;"&gt;OFFICIAL ADMIT ONE PASS&lt;/p&gt;
-    &lt;h2 style="margin: 6px 0 0; font-size: 22px;"&gt;{{event_name}}&lt;/h2&gt;
-  &lt;/div&gt;
-  &lt;div style="padding: 24px; text-align: center; background: #ffffff; color: #1e293b;"&gt;
-    &lt;p style="margin: 0 0 12px; font-size: 15px;"&gt;Hi &lt;strong&gt;{{to_name}}&lt;/strong&gt;, present this QR code at the entrance:&lt;/p&gt;
-    &lt;img src="{{qr_code_url}}" alt="Guest QR Code" width="240" height="240" style="border: 4px solid #0f3d2e; border-radius: 12px; display: inline-block;" /&gt;
-    &lt;p style="margin: 14px 0 4px; font-family: monospace; font-size: 18px; font-weight: bold; color: #0f3d2e;"&gt;{{guest_id}}&lt;/p&gt;
-    &lt;p style="margin: 0; font-size: 12px; color: #64748b;"&gt;Category: {{guest_type}} | Group: {{department}}&lt;/p&gt;
-  &lt;/div&gt;
-&lt;/div&gt;</textarea>
-                    <p class="text-[11px] text-slate-500 mt-1.5">Tip: In your EmailJS template settings, set <strong>To Email</strong> to <code class="bg-slate-100 px-1 rounded">{{to_email}}</code>. If your template already uses <code class="bg-slate-100 px-1 rounded">{{{message_html}}}</code> or <code class="bg-slate-100 px-1 rounded">{{{qr_html}}}</code>, this app also sends the full styled pass HTML automatically.</p>
-                </div>
-            </div>
-
-            <div class="bg-slate-50 px-6 py-3.5 border-t border-slate-200 flex justify-end">
-                <button type="button" onclick="closePayloadModal()" class="bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold px-4 py-2 rounded-xl transition">
-                    Done
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- =================================================================== -->
-    <!-- SINGLE GUEST QR PASS MODAL (FROM ATTENDANCE TABLE)                  -->
-    <!-- =================================================================== -->
-    <div id="guest-qr-modal" class="hidden fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-sm flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl shadow-2xl max-w-sm w-full overflow-hidden border border-slate-200">
-            <div class="bg-cranberry px-5 py-3.5 flex items-center justify-between text-white border-b border-goldLight/40">
-                <span class="text-xs font-bold uppercase tracking-widest text-goldLight">Guest Digital Pass</span>
-                <button type="button" onclick="closeGuestQrModal()" class="text-white/80 hover:text-white">
-                    <i class="fa-solid fa-xmark text-lg"></i>
-                </button>
-            </div>
-
-            <div class="p-6 text-center bg-gradient-to-b from-emeraldDeep to-emeraldDark text-white">
-                <div class="bg-white p-3 rounded-2xl inline-block border-4 border-goldLight shadow-md mb-3">
-                    <div id="modal-qr-container" class="w-44 h-44 flex items-center justify-center"></div>
-                </div>
-                <div>
-                    <span id="modal-guest-type" class="inline-block px-3 py-0.5 rounded-full text-[11px] font-bold uppercase bg-goldLight text-emeraldDark mb-1.5">VIP</span>
-                    <h4 id="modal-guest-name" class="font-serif text-xl font-bold text-white">Guest Name</h4>
-                    <p id="modal-guest-email" class="text-xs text-emerald-200 mt-0.5">guest@example.com</p>
-                    <p id="modal-guest-id" class="font-mono text-sm font-bold text-goldLight mt-3">XMAS-2026-0000</p>
-                </div>
-            </div>
-
-            <div class="p-4 bg-slate-50 border-t border-slate-200 grid grid-cols-2 gap-2.5">
-                <button type="button" id="modal-btn-resend" class="bg-emeraldDeep hover:bg-emeraldDark text-white text-xs font-semibold py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-paper-plane text-goldLight"></i>
-                    <span>Email QR Pass</span>
-                </button>
-                <button type="button" id="modal-btn-checkin" class="bg-cranberry hover:bg-cranberryDark text-white text-xs font-semibold py-2.5 px-3 rounded-xl transition flex items-center justify-center gap-1.5">
-                    <i class="fa-solid fa-check"></i>
-                    <span>Check In Now</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- =================================================================== -->
-    <!-- FIREBASE CLOUD DATABASE SYNC MODULE                                 -->
+    <!-- FIREBASE CLOUD DATABASE SYNC MODULE (qrattendance-39ba7)            -->
     <!-- =================================================================== -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, updateDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, deleteDoc, getDocs, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const appId = typeof __app_id !== "undefined" ? __app_id : "christmas-party-2026";
+        // User's dedicated Firebase project configuration for multi-device synchronization
+        const firebaseConfig = {
+            apiKey: "AIzaSyA_mpRuJB1Dl1LE_8dVuuRnpvp3uaTiU0Y",
+            authDomain: "qrattendance-39ba7.firebaseapp.com",
+            projectId: "qrattendance-39ba7",
+            storageBucket: "qrattendance-39ba7.firebasestorage.app",
+            messagingSenderId: "980137566036",
+            appId: "1:980137566036:web:653be5d1b861d1d5cd32c1",
+            measurementId: "G-RYC7YQ7MPL"
+        };
+
         let db = null;
         let auth = null;
-        let currentUser = null;
         let cloudReady = false;
+        let unsubscribeGuests = null;
 
         function setSyncBadge(state, label) {
             const badge = document.getElementById("cloud-sync-badge");
@@ -772,87 +679,104 @@
             }
         }
 
+        // Shared top-level Firestore collection across all devices
         function getGuestsCollectionRef() {
-            return collection(db, "artifacts", appId, "public", "data", "christmas_guests");
+            return collection(db, "christmas_guests");
         }
 
         function getGuestDocRef(guestId) {
-            return doc(db, "artifacts", appId, "public", "data", "christmas_guests", guestId);
+            return doc(db, "christmas_guests", guestId);
         }
 
         // Expose cloud operations to the main application script
         window.cloudDB = {
-            isReady: () => cloudReady && Boolean(currentUser),
+            isReady: () => cloudReady && Boolean(db),
             upsertGuest: async (guest) => {
-                if (!cloudReady || !currentUser) return;
+                if (!db) return;
                 await setDoc(getGuestDocRef(guest.id), guest, { merge: true });
             },
             updateGuestFields: async (guestId, fields) => {
-                if (!cloudReady || !currentUser) return;
+                if (!db) return;
                 await updateDoc(getGuestDocRef(guestId), fields);
             },
             removeGuest: async (guestId) => {
-                if (!cloudReady || !currentUser) return;
+                if (!db) return;
                 await deleteDoc(getGuestDocRef(guestId));
+            },
+            forceRefresh: async () => {
+                if (!db) {
+                    initCloudSync();
+                    return;
+                }
+                setSyncBadge("connecting", "Syncing qrattendance-39ba7...");
+                const snap = await getDocs(getGuestsCollectionRef());
+                const syncedList = [];
+                snap.forEach((docSnap) => {
+                    const data = docSnap.data();
+                    if (data && data.id) syncedList.push(data);
+                });
+                syncedList.sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
+                cloudReady = true;
+                setSyncBadge("live", "Cloud Synced: qrattendance-39ba7");
+                if (typeof window.applyCloudGuestsSnapshot === "function") {
+                    window.applyCloudGuestsSnapshot(syncedList);
+                }
             }
         };
 
-        async function initCloudSync() {
-            try {
-                if (typeof __firebase_config === "undefined" || !__firebase_config) {
-                    setSyncBadge("error", "Offline Mode");
-                    return;
-                }
+        function subscribeToSharedGuests() {
+            if (unsubscribeGuests) {
+                unsubscribeGuests();
+            }
 
-                const firebaseConfig = JSON.parse(__firebase_config);
+            unsubscribeGuests = onSnapshot(
+                getGuestsCollectionRef(),
+                (snapshot) => {
+                    const syncedList = [];
+                    snapshot.forEach((docSnap) => {
+                        const data = docSnap.data();
+                        if (data && data.id) {
+                            syncedList.push(data);
+                        }
+                    });
+
+                    // Sort in memory by newest registration first
+                    syncedList.sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
+
+                    cloudReady = true;
+                    setSyncBadge("live", "Cloud Synced: qrattendance-39ba7");
+
+                    if (typeof window.applyCloudGuestsSnapshot === "function") {
+                        window.applyCloudGuestsSnapshot(syncedList);
+                    }
+                },
+                (error) => {
+                    console.error("Firestore onSnapshot error:", error);
+                    cloudReady = false;
+                    const reason = error?.code === "permission-denied"
+                        ? "Firestore Rules Blocked (Check Test Mode)"
+                        : `Sync Error: ${error?.code || "Offline"}`;
+                    setSyncBadge("error", reason);
+                }
+            );
+        }
+
+        function initCloudSync() {
+            try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // RULE 3: Authenticate before executing any Firestore queries
-                if (typeof __initial_auth_token !== "undefined" && __initial_auth_token) {
-                    const cred = await signInWithCustomToken(auth, __initial_auth_token);
-                    currentUser = cred.user;
-                } else {
-                    const cred = await signInAnonymously(auth);
-                    currentUser = cred.user;
-                }
+                // Attempt anonymous sign-in in the background without blocking Firestore listener
+                signInAnonymously(auth).catch((authErr) => {
+                    console.info("Anonymous auth skipped or disabled in console (using open Firestore rules):", authErr?.code);
+                });
 
-                if (!currentUser) {
-                    setSyncBadge("error", "Auth Required");
-                    return;
-                }
-
-                cloudReady = true;
-                setSyncBadge("live", "Live Multi-Device Sync");
-
-                // Real-time listener on public shared guest collection (RULE 1 & RULE 2)
-                onSnapshot(
-                    getGuestsCollectionRef(),
-                    (snapshot) => {
-                        const syncedList = [];
-                        snapshot.forEach((docSnap) => {
-                            const data = docSnap.data();
-                            if (data && data.id) {
-                                syncedList.push(data);
-                            }
-                        });
-
-                        // Sort in memory by newest registration first
-                        syncedList.sort((a, b) => new Date(b.registeredAt || 0) - new Date(a.registeredAt || 0));
-
-                        if (typeof window.applyCloudGuestsSnapshot === "function") {
-                            window.applyCloudGuestsSnapshot(syncedList);
-                        }
-                    },
-                    (error) => {
-                        console.error("Firestore onSnapshot error:", error);
-                        setSyncBadge("error", "Sync Interrupted");
-                    }
-                );
+                // Immediately subscribe to shared 'christmas_guests' collection across all devices
+                subscribeToSharedGuests();
             } catch (err) {
                 console.error("Cloud DB initialization failed:", err);
-                setSyncBadge("error", "Sync Offline");
+                setSyncBadge("error", "Firebase Init Failed");
             }
         }
 
@@ -872,14 +796,22 @@
             templateId: "template_n9u8619"
         };
 
+        const LOCAL_BACKUP_KEY = "xmas_party_2026_guests_cache_v1";
+
         document.addEventListener("DOMContentLoaded", () => {
             try {
                 if (window.emailjs) {
-                    emailjs.init(window.EMAILJS_CONFIG.publicKey);
+                    emailjs.init({ publicKey: window.EMAILJS_CONFIG.publicKey });
                     console.log("EmailJS initialized with Public Key:", window.EMAILJS_CONFIG.publicKey);
                 }
             } catch (err) {
                 console.error("Failed to initialize EmailJS:", err);
+            }
+
+            // Load instant local cache while Firestore connects
+            const cached = getLocalCachedGuests();
+            if (cached.length > 0) {
+                guests = cached;
             }
 
             initSnowfall();
@@ -887,7 +819,7 @@
         });
 
         /**
-         * 2. IN-MEMORY & REAL-TIME CLOUD STATE MANAGEMENT
+         * 2. IN-MEMORY, LOCAL CACHE & REAL-TIME CLOUD STATE MANAGEMENT
          */
         let guests = [];
         let currentPreviewGuestId = null;
@@ -896,12 +828,79 @@
         let lastScannedCode = "";
         let lastScannedTime = 0;
 
-        // Called automatically by Firebase onSnapshot whenever any connected device updates the database
+        function getLocalCachedGuests() {
+            try {
+                const raw = localStorage.getItem(LOCAL_BACKUP_KEY);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (_) {
+                return [];
+            }
+        }
+
+        function saveLocalCachedGuests(list) {
+            try {
+                localStorage.setItem(LOCAL_BACKUP_KEY, JSON.stringify(list));
+            } catch (_) { /* Ignore quota errors */ }
+        }
+
+        function checkLocalToCloudMigrationButton(cloudGuests) {
+            const uploadBtn = document.getElementById("btn-upload-local-cloud");
+            const uploadLabel = document.getElementById("upload-local-label");
+            if (!uploadBtn || !uploadLabel) return;
+
+            const cached = getLocalCachedGuests();
+            const missingInCloud = cached.filter(localG => !cloudGuests.some(cg => cg.id === localG.id));
+
+            if (missingInCloud.length > 0 && window.cloudDB && window.cloudDB.isReady()) {
+                uploadLabel.textContent = `Upload ${missingInCloud.length} Local Guest${missingInCloud.length > 1 ? "s" : ""} to Cloud`;
+                uploadBtn.classList.remove("hidden");
+            } else {
+                uploadBtn.classList.add("hidden");
+            }
+        }
+
+        window.uploadLocalGuestsToCloud = async function () {
+            if (!window.cloudDB || !window.cloudDB.isReady()) {
+                showToast("Cloud Not Ready", "Wait until Cloud Synced status is green before uploading.", "warning");
+                return;
+            }
+            const cached = getLocalCachedGuests();
+            const missingInCloud = cached.filter(localG => !guests.some(cg => cg.id === localG.id));
+            if (missingInCloud.length === 0) return;
+
+            let uploaded = 0;
+            for (const g of missingInCloud) {
+                try {
+                    await window.cloudDB.upsertGuest(g);
+                    uploaded++;
+                } catch (err) {
+                    console.error("Failed uploading local guest:", g.id, err);
+                }
+            }
+            showToast("Local Guests Uploaded", `Synced ${uploaded} local guest record(s) to qrattendance-39ba7.`, "success");
+            document.getElementById("btn-upload-local-cloud")?.classList.add("hidden");
+        };
+
+        window.forceCloudSync = async function () {
+            if (!window.cloudDB || typeof window.cloudDB.forceRefresh !== "function") return;
+            try {
+                await window.cloudDB.forceRefresh();
+                showToast("Cloud Synced", `Connected to qrattendance-39ba7 (${guests.length} guests loaded).`, "success");
+            } catch (err) {
+                showToast("Sync Error", err?.message || "Could not refresh from Firestore.", "error");
+            }
+        };
+
+        // Called automatically by Firebase onSnapshot whenever any connected device updates 'christmas_guests'
         window.applyCloudGuestsSnapshot = function (syncedGuests) {
+            checkLocalToCloudMigrationButton(syncedGuests);
+
             guests = syncedGuests;
+            saveLocalCachedGuests(guests);
             updateAllUI();
 
-            // Refresh manual scanner dropdown if on scanner view
+            // Refresh manual scanner dropdown
             populateManualGuestDropdown();
 
             // Keep live pass preview badge updated if the displayed guest changed on another device
@@ -914,13 +913,14 @@
         };
 
         async function persistGuestRecord(guest) {
-            // Update local in-memory state immediately for zero-latency UI
+            // Update local in-memory state & localStorage cache immediately
             const idx = guests.findIndex(g => g.id === guest.id);
             if (idx >= 0) {
                 guests[idx] = guest;
             } else {
                 guests.unshift(guest);
             }
+            saveLocalCachedGuests(guests);
             updateAllUI();
 
             // Sync to shared cloud database so all other connected devices update instantaneously
@@ -929,7 +929,7 @@
                     await window.cloudDB.upsertGuest(guest);
                 } catch (err) {
                     console.error("Cloud upsert error:", err);
-                    showToast("Sync Warning", "Saved locally, but cloud sync encountered a delay.", "warning");
+                    showToast("Cloud Write Error", `Saved locally, but Firestore failed: ${err?.message || "Check rules"}`, "error");
                 }
             }
         }
@@ -938,6 +938,7 @@
             const guest = guests.find(g => g.id === guestId);
             if (guest) {
                 Object.assign(guest, fields);
+                saveLocalCachedGuests(guests);
                 updateAllUI();
             }
 
@@ -954,6 +955,7 @@
             const idx = guests.findIndex(g => g.id === guestId);
             if (idx === -1) return null;
             const removed = guests.splice(idx, 1)[0];
+            saveLocalCachedGuests(guests);
             updateAllUI();
 
             if (window.cloudDB && window.cloudDB.isReady()) {
@@ -967,10 +969,14 @@
         }
 
         function generateUniqueGuestId() {
+            const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
             let id;
             do {
-                const rand = Math.floor(1000 + Math.random() * 9000);
-                id = `XMAS-2026-${rand}`;
+                let suffix = "";
+                for (let i = 0; i < 4; i++) {
+                    suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+                }
+                id = `XMAS-2026-${suffix}`;
             } while (guests.some(g => g.id === id));
             return id;
         }
@@ -1237,14 +1243,15 @@
                 guest_id: guest.id,
                 guest_type: guest.type,
                 department: guest.department,
-                event_name: "Annual Christmas Party 2026",
+                table_group: guest.department,
+                event_name: "Grand Christmas Party 2026",
                 qr_code_url: hostedQrUrl,
                 qr_image_url: hostedQrUrl,
                 qr_code: hostedQrUrl,
                 qr_code_base64: base64Qr || hostedQrUrl,
                 qr_html: renderedPassHtml,
                 message_html: renderedPassHtml,
-                message: `Ho Ho Ho, ${guest.name}! You are officially registered for the Annual Christmas Party 2026 (${guest.type}). Your Pass ID is ${guest.id}. View or save your QR code here: ${hostedQrUrl}`
+                message: `Ho Ho Ho, ${guest.name}! You are officially registered for the Grand Christmas Party 2026 (${guest.type}). Your Pass ID is ${guest.id}. View or save your QR code here: ${hostedQrUrl}`
             };
 
             try {
