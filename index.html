@@ -85,10 +85,10 @@
     </div>
   </header>
 
-  <!-- Firestore Rules Alert Banner -->
+  <!-- Firestore Diagnostic Alert Banner -->
   <div id="rulesAlertBanner" class="hidden bg-red-600 text-white px-4 py-3 text-sm">
     <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-      <span><strong>Firestore Rules Blocked:</strong> Open Firebase Console &rarr; Firestore &rarr; Rules and publish <code class="bg-red-800 px-1.5 py-0.5 rounded">allow read, write: if true;</code></span>
+      <span id="rulesAlertText"><strong>Firestore Connection Blocked:</strong> Check Firestore Rules in Firebase Console.</span>
       <a href="https://console.firebase.google.com/project/qrattendance-39ba7/firestore/rules" target="_blank" class="underline font-bold">Open Firestore Rules &rarr;</a>
     </div>
   </div>
@@ -97,4 +97,768 @@
   <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
     <!-- TAB 1: REGISTRATION -->
-    <section id="view-register" class="grid grid-cols-1 lg:grid-cols-1
+    <section id="view-register" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">New Guest Registration</h2>
+            <p class="text-xs text-slate-500">Generates a QR pass, syncs across all devices, and emails the QR image.</p>
+          </div>
+          <button type="button" onclick="openEmailTemplateModal()" class="text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 flex items-center gap-1.5">
+            <i data-lucide="code" class="w-3.5 h-3.5"></i>
+            <span>EmailJS HTML Setup</span>
+          </button>
+        </div>
+
+        <form id="registerForm" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
+              <input type="text" id="guestName" required placeholder="e.g., Juan Dela Cruz"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address (for QR Pass) *</label>
+              <input type="email" id="guestEmail" required placeholder="guest@example.com"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Guest Category</label>
+              <select id="guestType" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm bg-white">
+                <option value="Regular Guest">Regular Guest</option>
+                <option value="VIP">VIP</option>
+                <option value="Employee / Staff">Employee / Staff</option>
+                <option value="Plus One (+1)">Plus One (+1)</option>
+                <option value="Performer / Speaker">Performer / Speaker</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Department / Table No.</label>
+              <input type="text" id="guestTable" placeholder="e.g., Table 4 / Marketing"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2 pt-1">
+            <input type="checkbox" id="autoSendEmail" checked class="w-4 h-4 text-red-700 rounded border-slate-300" />
+            <label for="autoSendEmail" class="text-sm text-slate-700 font-medium">
+              Automatically send QR code image to guest's email via EmailJS
+            </label>
+          </div>
+
+          <div class="pt-2">
+            <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold text-sm shadow-sm flex items-center justify-center gap-2 transition">
+              <i data-lucide="qr-code" class="w-4 h-4"></i>
+              <span>Generate Pass & Sync</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Digital Pass Preview -->
+      <div class="lg:col-span-5">
+        <div id="printablePass" class="bg-white rounded-2xl shadow-md border-2 border-red-800/20 overflow-hidden">
+          <div class="festive-bg text-white px-6 py-4 text-center">
+            <p class="text-[11px] uppercase tracking-widest text-amber-300 font-bold">Official Event Pass</p>
+            <h3 class="text-lg font-extrabold mt-0.5">Christmas Party 2026</h3>
+          </div>
+          <div class="p-6 flex flex-col items-center text-center">
+            <div id="qrCanvasContainer" class="p-3 bg-white border-2 border-dashed border-red-300 rounded-2xl shadow-inner min-h-[204px] min-w-[204px] flex items-center justify-center">
+              <p class="text-xs text-slate-400 max-w-[160px]">Register a guest to preview their scannable QR pass</p>
+            </div>
+            <div class="mt-4 space-y-1">
+              <span id="passBadgeType" class="inline-block px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">GUEST PASS</span>
+              <h4 id="passGuestName" class="text-xl font-bold text-slate-900">Guest Name</h4>
+              <p id="passGuestEmail" class="text-xs text-slate-500">guest@example.com</p>
+              <p id="passGuestId" class="font-mono text-sm font-bold text-red-700 pt-1">XMAS-2026-XXXX</p>
+            </div>
+            <div id="passActions" class="hidden mt-5 pt-4 border-t border-slate-100 w-full flex flex-wrap justify-center gap-2">
+              <button type="button" onclick="resendCurrentPassEmail()" class="px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+                <span>Resend Email</span>
+              </button>
+              <button type="button" onclick="downloadCurrentQrPng()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Save PNG</span>
+              </button>
+              <button type="button" onclick="window.print()" class="px-3.5 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                <span>Print</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 2: STAFF QR SCANNER -->
+    <section id="view-scanner" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Camera QR Scanner</h2>
+            <p class="text-xs text-slate-500">Point camera at attendee's QR code to check them in.</p>
+          </div>
+          <div class="flex gap-2">
+            <button id="startCamBtn" onclick="startCameraScanner()" class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
+              <i data-lucide="camera" class="w-4 h-4"></i>
+              <span>Start Camera</span>
+            </button>
+            <button id="stopCamBtn" onclick="stopCameraScanner()" class="hidden px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5">
+              <i data-lucide="camera-off" class="w-4 h-4"></i>
+              <span>Stop</span>
+            </button>
+          </div>
+        </div>
+
+        <div id="reader" class="w-full rounded-xl overflow-hidden bg-slate-900 min-h-[280px] flex items-center justify-center text-slate-400 text-sm">
+          Click "Start Camera" to scan attendee passes
+        </div>
+
+        <div class="mt-5 pt-4 border-t border-slate-100">
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Manual Guest ID Entry / USB Scanner</label>
+          <div class="flex gap-2">
+            <input type="text" id="manualCodeInput" placeholder="Enter XMAS-2026-XXXX..."
+              onkeydown="if(event.key==='Enter'){ handleCheckInScan(this.value); this.value=''; }"
+              class="flex-1 px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-mono uppercase outline-none" />
+            <button onclick="var el=document.getElementById('manualCodeInput'); handleCheckInScan(el.value); el.value='';"
+              class="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">
+              Check In
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="lg:col-span-6 space-y-6">
+        <div id="scanResultBox" class="bg-white rounded-2xl shadow-sm border-2 border-slate-200 p-6 text-center">
+          <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="qr-code" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-base font-bold text-slate-800">Ready for Check-In</h3>
+          <p class="text-xs text-slate-500 mt-1">Scan results update all connected devices in real time.</p>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i data-lucide="clock" class="w-4 h-4 text-emerald-700"></i>
+            <span>Recent Live Check-Ins</span>
+          </h3>
+          <div id="recentScansList" class="space-y-2 text-sm text-slate-500">
+            No check-ins recorded yet.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 3: GUEST DIRECTORY & EXCEL -->
+    <section id="view-dashboard" class="hidden space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-slate-500 uppercase">Total Registered</p>
+          <p id="statTotal" class="text-3xl font-extrabold text-slate-900 mt-1">0</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-emerald-700 uppercase">Checked In</p>
+          <p id="statCheckedIn" class="text-3xl font-extrabold text-emerald-700 mt-1">0</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-amber-700 uppercase">Awaiting Arrival</p>
+          <p id="statPending" class="text-3xl font-extrabold text-amber-600 mt-1">0</p>
+        </div>
+      </div>
+
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2 flex-1 min-w-[240px]">
+          <input type="text" id="searchInput" oninput="renderDashboard()" placeholder="Search name, email, or QR ID..."
+            class="px-3.5 py-2 rounded-xl border border-slate-300 text-sm w-full sm:w-64 outline-none" />
+          <select id="filterStatus" onchange="renderDashboard()" class="px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white">
+            <option value="all">All Guests</option>
+            <option value="checked_in">Checked In Only</option>
+            <option value="pending">Not Yet Arrived</option>
+          </select>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="cursor-pointer px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+            <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-700"></i>
+            <span>Import Excel (.xlsx)</span>
+            <input type="file" id="excelUploadInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="importExcelFile(event)" />
+          </label>
+          <button onclick="exportExcelFile()" class="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+            <span>Export Excel (.xlsx)</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase text-slate-500 font-bold">
+              <th class="py-3.5 px-4">Guest ID</th>
+              <th class="py-3.5 px-4">Attendee</th>
+              <th class="py-3.5 px-4">Category / Table</th>
+              <th class="py-3.5 px-4">Email Status</th>
+              <th class="py-3.5 px-4">Attendance</th>
+              <th class="py-3.5 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="guestTableBody" class="divide-y divide-slate-100 text-sm">
+            <tr>
+              <td colspan="6" class="py-8 text-center text-slate-400">Loading guest list...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- EmailJS Template Modal -->
+  <div id="emailModal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between border-b pb-3">
+        <h3 class="font-bold text-slate-900">EmailJS Template Setup (template_n9u8619)</h3>
+        <button onclick="document.getElementById('emailModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
+      </div>
+      <p class="text-xs text-slate-600">
+        Paste this HTML into your EmailJS template (<strong>Source Code &lt;&gt;</strong>) and set <strong>To Email</strong> to <code class="bg-slate-100 px-1 rounded">{{to_email}}</code>:
+      </p>
+      <textarea id="emailTemplateCode" readonly rows="9" class="w-full font-mono text-xs p-3 bg-slate-900 text-emerald-300 rounded-xl"><div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; border: 2px solid #991b1b; border-radius: 14px; overflow: hidden;">
+  <div style="background: #991b1b; color: #ffffff; padding: 20px; text-align: center;">
+    <h2 style="margin: 0;">Christmas Party 2026</h2>
+    <p style="margin: 5px 0 0; color: #fde68a;">Official QR Check-In Pass</p>
+  </div>
+  <div style="padding: 24px; text-align: center;">
+    <p>Hi <strong>{{to_name}}</strong> ({{guest_type}}),</p>
+    <p>Present this QR code at the entrance for quick check-in:</p>
+    <img src="{{qr_code_url}}" alt="QR Pass" width="230" height="230" style="border: 3px solid #15803d; border-radius: 12px; margin: 12px 0;" />
+    <p style="font-family: monospace; font-size: 18px; font-weight: bold; color: #991b1b;">{{guest_id}}</p>
+  </div>
+</div></textarea>
+      <div class="flex justify-end gap-2">
+        <button onclick="copyTemplateHtml()" class="px-4 py-2 rounded-xl bg-red-700 text-white text-xs font-semibold">Copy HTML Code</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastBox" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
+
+  <!-- Universal Cloud Sync Script -->
+  <script>
+    var FIREBASE_PROJECT_ID = "qrattendance-39ba7";
+    var FIREBASE_API_KEY = "AIzaSyA_mpRuJB1Dl1LE_8dVuuRnpvp3uaTiU0Y";
+    var COLLECTION_NAME = "christmas_guests";
+    var REST_BASE_URL = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + COLLECTION_NAME + "?key=" + FIREBASE_API_KEY;
+    var LOCAL_KEY = "xmas_2026_guests_cache";
+
+    var guests = [];
+    try { guests = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]"); } catch (e) { guests = []; }
+    var currentPassGuest = null;
+    var html5QrScanner = null;
+    var isSyncingNow = false;
+
+    function toFirestoreFields(obj) {
+      var fields = {};
+      for (var k in obj) {
+        var v = obj[k];
+        if (typeof v === "boolean") fields[k] = { booleanValue: v };
+        else if (typeof v === "number") fields[k] = { integerValue: String(v) };
+        else fields[k] = { stringValue: v == null ? "" : String(v) };
+      }
+      return { fields: fields };
+    }
+
+    function fromFirestoreDoc(docObj) {
+      var f = docObj.fields || {};
+      var out = {};
+      for (var k in f) {
+        var val = f[k];
+        if ("stringValue" in val) out[k] = val.stringValue;
+        else if ("booleanValue" in val) out[k] = val.booleanValue;
+        else if ("integerValue" in val) out[k] = Number(val.integerValue);
+      }
+      if (!out.id && docObj.name) out.id = docObj.name.split("/").pop();
+      return out;
+    }
+
+    function setSyncBadge(state, label, detailMsg) {
+      var badge = document.getElementById("syncBadge");
+      var dot = document.getElementById("syncDot");
+      var text = document.getElementById("syncText");
+      var alertBanner = document.getElementById("rulesAlertBanner");
+      var alertText = document.getElementById("rulesAlertText");
+
+      text.textContent = label;
+      alertBanner.classList.add("hidden");
+
+      if (state === "live") {
+        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/25 border border-emerald-300/50 text-emerald-100";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+      } else if (state === "blocked") {
+        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/30 border border-red-200 text-white";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-red-300 animate-ping";
+        if (detailMsg) alertText.innerHTML = detailMsg;
+        alertBanner.classList.remove("hidden");
+      } else {
+        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/20 border border-amber-300/40 text-amber-100";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+      }
+    }
+
+    function persistLocalAndRender() {
+      guests.sort(function (a, b) { return (b.registeredAt || "").localeCompare(a.registeredAt || ""); });
+      try { localStorage.setItem(LOCAL_KEY, JSON.stringify(guests)); } catch (e) {}
+      document.getElementById("navCountBadge").textContent = guests.length;
+      renderDashboard();
+      renderRecentScans();
+    }
+
+    async function syncFromCloud(showNotification) {
+      if (isSyncingNow) return;
+      isSyncingNow = true;
+
+      try {
+        var res = await fetch(REST_BASE_URL + "&pageSize=500&_t=" + Date.now(), { cache: "no-store" });
+        if (res.status === 403) {
+          setSyncBadge("blocked", "Error 403: Blocked", "<strong>Firestore Rules or API Key Blocked (403):</strong> Open Firebase Console &rarr; Firestore &rarr; Rules and publish <code>allow read, write: if true;</code>");
+          isSyncingNow = false;
+          return;
+        }
+        if (res.status === 404) {
+          setSyncBadge("blocked", "Error 404: No DB", "<strong>Firestore Database Not Created (404):</strong> Open Firebase Console &rarr; Firestore and click <strong>Create database</strong>.");
+          isSyncingNow = false;
+          return;
+        }
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
+        var data = await res.json();
+        var remoteList = (data.documents || []).map(fromFirestoreDoc);
+
+        var remoteIds = {};
+        remoteList.forEach(function (g) { remoteIds[g.id] = true; });
+        for (var i = 0; i < guests.length; i++) {
+          if (guests[i].id && !remoteIds[guests[i].id]) {
+            await pushGuestToCloud(guests[i]);
+            remoteList.push(guests[i]);
+          }
+        }
+
+        guests = remoteList;
+        setSyncBadge("live", "Synced (" + guests.length + " Guests)");
+        persistLocalAndRender();
+        if (showNotification) showToast("Synced " + guests.length + " guests from cloud!", "success");
+      } catch (err) {
+        setSyncBadge("connecting", "Offline (" + (err.message || "Network") + ")");
+        if (showNotification) showToast("Network issue: " + (err.message || "Check connection"), "warning");
+      } finally {
+        isSyncingNow = false;
+      }
+    }
+
+    async function pushGuestToCloud(guest) {
+      var idx = guests.findIndex(function (g) { return g.id === guest.id; });
+      if (idx >= 0) guests[idx] = guest;
+      else guests.unshift(guest);
+      persistLocalAndRender();
+
+      var docUrl = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + COLLECTION_NAME + "/" + encodeURIComponent(guest.id) + "?key=" + FIREBASE_API_KEY;
+      try {
+        var res = await fetch(docUrl, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(toFirestoreFields(guest))
+        });
+        if (res.status === 403) {
+          setSyncBadge("blocked", "Error 403: Blocked");
+        } else if (res.ok) {
+          setSyncBadge("live", "Synced (" + guests.length + " Guests)");
+        }
+      } catch (err) {
+        setSyncBadge("connecting", "Saved Locally");
+      }
+    }
+
+    async function deleteGuestFromCloud(guestId) {
+      guests = guests.filter(function (g) { return g.id !== guestId; });
+      persistLocalAndRender();
+      var docUrl = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + COLLECTION_NAME + "/" + encodeURIComponent(guestId) + "?key=" + FIREBASE_API_KEY;
+      await fetch(docUrl, { method: "DELETE" }).catch(function () {});
+    }
+
+    function forceCloudSync() {
+      setSyncBadge("connecting", "Syncing...");
+      syncFromCloud(true);
+    }
+
+    function getPublicQrUrl(guestId) {
+      return "https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=" + encodeURIComponent(guestId);
+    }
+
+    async function sendQrEmail(guest) {
+      var qrUrl = getPublicQrUrl(guest.id);
+      var templateParams = {
+        to_name: guest.name,
+        to_email: guest.email,
+        guest_id: guest.id,
+        guest_type: guest.type,
+        table_info: guest.table || "Open Seating",
+        event_name: "Christmas Party 2026",
+        qr_code_url: qrUrl,
+        qr_image_url: qrUrl,
+        message: "Hi " + guest.name + ", your Christmas Party QR Pass ID is " + guest.id + ". View QR: " + qrUrl
+      };
+
+      try {
+        await emailjs.send(
+          window.EMAILJS_CONFIG.serviceId,
+          window.EMAILJS_CONFIG.templateId,
+          templateParams
+        );
+        guest.emailSent = true;
+        await pushGuestToCloud(guest);
+        showToast("QR Pass emailed to " + guest.email + "!", "success");
+      } catch (err) {
+        showToast("Registered, but email failed: " + (err && err.text ? err.text : "Check EmailJS"), "warning");
+      }
+    }
+
+    document.getElementById("registerForm").addEventListener("submit", async function (e) {
+      e.preventDefault();
+      var name = document.getElementById("guestName").value.trim();
+      var email = document.getElementById("guestEmail").value.trim();
+      var type = document.getElementById("guestType").value;
+      var table = document.getElementById("guestTable").value.trim();
+      var shouldEmail = document.getElementById("autoSendEmail").checked;
+
+      var randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+      var guest = {
+        id: "XMAS-2026-" + randomCode,
+        name: name,
+        email: email,
+        type: type,
+        table: table,
+        checkedIn: false,
+        checkInTime: "",
+        emailSent: false,
+        registeredAt: new Date().toISOString()
+      };
+
+      renderPassPreview(guest);
+      await pushGuestToCloud(guest);
+      showToast("Registered & synced " + guest.name + "!", "success");
+
+      if (shouldEmail) {
+        await sendQrEmail(guest);
+      }
+
+      e.target.reset();
+      document.getElementById("autoSendEmail").checked = true;
+    });
+
+    function renderPassPreview(guest) {
+      currentPassGuest = guest;
+      var container = document.getElementById("qrCanvasContainer");
+      container.innerHTML = "";
+      new QRCode(container, {
+        text: guest.id,
+        width: 180,
+        height: 180,
+        colorDark: "#7f1d1d",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      document.getElementById("passBadgeType").textContent = guest.type.toUpperCase();
+      document.getElementById("passGuestName").textContent = guest.name;
+      document.getElementById("passGuestEmail").textContent = guest.email;
+      document.getElementById("passGuestId").textContent = guest.id;
+      document.getElementById("passActions").classList.remove("hidden");
+    }
+
+    function resendCurrentPassEmail() {
+      if (currentPassGuest) sendQrEmail(currentPassGuest);
+    }
+
+    function downloadCurrentQrPng() {
+      if (!currentPassGuest) return;
+      var canvas = document.querySelector("#qrCanvasContainer canvas");
+      if (!canvas) return;
+      var link = document.createElement("a");
+      link.download = currentPassGuest.id + "_" + currentPassGuest.name.replace(/\s+/g, "_") + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
+
+    function playBeep(success) {
+      try {
+        var ctx = new (window.AudioContext || window.webkitAudioContext)();
+        var osc = ctx.createOscillator();
+        var gain = ctx.createGain();
+        osc.type = success ? "sine" : "sawtooth";
+        osc.frequency.setValueAtTime(success ? 880 : 220, ctx.currentTime);
+        if (success) osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } catch (e) {}
+    }
+
+    async function handleCheckInScan(rawCode) {
+      var code = (rawCode || "").trim().toUpperCase();
+      if (!code) return;
+
+      await syncFromCloud(false);
+
+      var resultBox = document.getElementById("scanResultBox");
+      var guest = guests.find(function (g) { return g.id.toUpperCase() === code; });
+
+      if (!guest) {
+        playBeep(false);
+        resultBox.className = "bg-red-50 rounded-2xl shadow-sm border-2 border-red-500 p-6 text-center";
+        resultBox.innerHTML = '<h3 class="text-lg font-extrabold text-red-800">Invalid QR Code</h3><p class="text-sm text-red-700 mt-1">No guest found for ID <span class="font-mono font-bold">' + code + '</span></p>';
+        return;
+      }
+
+      if (guest.checkedIn) {
+        playBeep(false);
+        resultBox.className = "bg-amber-50 rounded-2xl shadow-sm border-2 border-amber-500 p-6 text-center";
+        resultBox.innerHTML = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900">ALREADY CHECKED IN</span><h3 class="text-xl font-extrabold text-slate-900 mt-2">' + guest.name + '</h3><p class="text-xs text-slate-600 mt-1">Checked in at ' + guest.checkInTime + '</p>';
+        return;
+      }
+
+      guest.checkedIn = true;
+      guest.checkInTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      await pushGuestToCloud(guest);
+
+      playBeep(true);
+      resultBox.className = "bg-emerald-50 rounded-2xl shadow-sm border-2 border-emerald-600 p-6 text-center";
+      resultBox.innerHTML = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-200 text-emerald-900">WELCOME TO THE PARTY!</span><h3 class="text-2xl font-extrabold text-emerald-950 mt-2">' + guest.name + '</h3><p class="text-sm font-semibold text-emerald-800">' + guest.type + (guest.table ? " • " + guest.table : "") + '</p><p class="text-xs text-emerald-700 mt-1">Checked in at ' + guest.checkInTime + '</p>';
+    }
+
+    var lastScanText = "";
+    var lastScanTime = 0;
+
+    function startCameraScanner() {
+      document.getElementById("startCamBtn").classList.add("hidden");
+      document.getElementById("stopCamBtn").classList.remove("hidden");
+
+      html5QrScanner = new Html5Qrcode("reader");
+      html5QrScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        function (decodedText) {
+          var now = Date.now();
+          if (decodedText === lastScanText && now - lastScanTime < 3000) return;
+          lastScanText = decodedText;
+          lastScanTime = now;
+          handleCheckInScan(decodedText);
+        },
+        function () {}
+      ).catch(function () {
+        showToast("Camera permission denied or requires HTTPS", "warning");
+        stopCameraScanner();
+      });
+    }
+
+    function stopCameraScanner() {
+      if (html5QrScanner) {
+        html5QrScanner.stop().catch(function () {});
+        html5QrScanner = null;
+      }
+      document.getElementById("reader").innerHTML = 'Click "Start Camera" to scan attendee passes';
+      document.getElementById("startCamBtn").classList.remove("hidden");
+      document.getElementById("stopCamBtn").classList.add("hidden");
+    }
+
+    function renderDashboard() {
+      var q = (document.getElementById("searchInput").value || "").toLowerCase();
+      var filter = document.getElementById("filterStatus").value;
+
+      var checkedCount = guests.filter(function (g) { return g.checkedIn; }).length;
+      document.getElementById("statTotal").textContent = guests.length;
+      document.getElementById("statCheckedIn").textContent = checkedCount;
+      document.getElementById("statPending").textContent = guests.length - checkedCount;
+
+      var filtered = guests.filter(function (g) {
+        var matchesQuery =
+          (g.name || "").toLowerCase().includes(q) ||
+          (g.email || "").toLowerCase().includes(q) ||
+          (g.id || "").toLowerCase().includes(q);
+        if (!matchesQuery) return false;
+        if (filter === "checked_in") return g.checkedIn;
+        if (filter === "pending") return !g.checkedIn;
+        return true;
+      });
+
+      var tbody = document.getElementById("guestTableBody");
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">No matching guests found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(function (g) {
+        var emailBadge = g.emailSent
+          ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Sent</span>'
+          : '<button onclick="triggerResend(\'' + g.id + '\')" class="px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold">Send QR</button>';
+        var statusBadge = g.checkedIn
+          ? '<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">Checked In (' + g.checkInTime + ')</span>'
+          : '<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">Pending</span>';
+
+        return '<tr class="hover:bg-slate-50">' +
+          '<td class="py-3 px-4 font-mono text-xs font-bold text-red-700">' + g.id + '</td>' +
+          '<td class="py-3 px-4"><div class="font-semibold text-slate-900">' + g.name + '</div><div class="text-xs text-slate-500">' + g.email + '</div></td>' +
+          '<td class="py-3 px-4 text-xs"><span class="font-semibold text-slate-700">' + g.type + '</span>' + (g.table ? '<div class="text-slate-400">' + g.table + '</div>' : '') + '</td>' +
+          '<td class="py-3 px-4 text-xs">' + emailBadge + '</td>' +
+          '<td class="py-3 px-4 text-xs">' + statusBadge + '</td>' +
+          '<td class="py-3 px-4 text-right space-x-1">' +
+            '<button onclick="toggleGuestCheckIn(\'' + g.id + '\')" class="px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-xs font-semibold">' + (g.checkedIn ? "Undo" : "Check In") + '</button>' +
+            '<button onclick="previewGuestFromTable(\'' + g.id + '\')" class="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-semibold">QR</button>' +
+            '<button onclick="removeGuest(\'' + g.id + '\')" class="px-2 py-1 rounded-lg text-slate-400 hover:text-red-600 text-xs">&times;</button>' +
+          '</td>' +
+        '</tr>';
+      }).join("");
+    }
+
+    function renderRecentScans() {
+      var checked = guests.filter(function (g) { return g.checkedIn; }).slice(0, 6);
+      var box = document.getElementById("recentScansList");
+      if (!checked.length) {
+        box.innerHTML = "No check-ins recorded yet.";
+        return;
+      }
+      box.innerHTML = checked.map(function (g) {
+        return '<div class="flex items-center justify-between py-2 px-3 rounded-xl bg-slate-50 border border-slate-100">' +
+          '<div><span class="font-semibold text-slate-800">' + g.name + '</span><span class="text-xs text-slate-400 ml-2 font-mono">' + g.id + '</span></div>' +
+          '<span class="text-xs font-bold text-emerald-700">' + g.checkInTime + '</span>' +
+        '</div>';
+      }).join("");
+    }
+
+    async function toggleGuestCheckIn(id) {
+      var g = guests.find(function (item) { return item.id === id; });
+      if (!g) return;
+      g.checkedIn = !g.checkedIn;
+      g.checkInTime = g.checkedIn ? new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "";
+      await pushGuestToCloud(g);
+    }
+
+    function triggerResend(id) {
+      var g = guests.find(function (item) { return item.id === id; });
+      if (g) sendQrEmail(g);
+    }
+
+    function previewGuestFromTable(id) {
+      var g = guests.find(function (item) { return item.id === id; });
+      if (!g) return;
+      renderPassPreview(g);
+      switchTab("register");
+    }
+
+    async function removeGuest(id) {
+      if (!confirm("Remove this guest from the cloud database?")) return;
+      await deleteGuestFromCloud(id);
+    }
+
+    function exportExcelFile() {
+      var rows = guests.map(function (g) {
+        return {
+          "Guest ID": g.id,
+          "Full Name": g.name,
+          "Email": g.email,
+          "Guest Type": g.type,
+          "Table / Dept": g.table || "",
+          "Email Sent": g.emailSent ? "Yes" : "No",
+          "Check-In Status": g.checkedIn ? "Checked In" : "Pending",
+          "Check-In Time": g.checkInTime || ""
+        };
+      });
+      var ws = XLSX.utils.json_to_sheet(rows);
+      var wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Christmas_Guests");
+      XLSX.writeFile(wb, "Christmas_Party_2026_Attendance.xlsx");
+    }
+
+    function importExcelFile(event) {
+      var file = event.target.files[0];
+      if (!file) return;
+      var reader = new FileReader();
+      reader.onload = async function (e) {
+        var wb = XLSX.read(e.target.result, { type: "binary" });
+        var sheet = wb.Sheets[wb.SheetNames[0]];
+        var rows = XLSX.utils.sheet_to_json(sheet);
+        var imported = 0;
+
+        for (var i = 0; i < rows.length; i++) {
+          var r = rows[i];
+          var name = r["Full Name"] || r["Name"] || r["name"];
+          var email = r["Email"] || r["email"] || "";
+          if (!name) continue;
+
+          var existingId = r["Guest ID"] || ("XMAS-2026-" + Math.random().toString(36).substring(2, 6).toUpperCase());
+          var guest = {
+            id: String(existingId).trim(),
+            name: String(name).trim(),
+            email: String(email).trim(),
+            type: r["Guest Type"] || "Regular Guest",
+            table: r["Table / Dept"] || "",
+            checkedIn: String(r["Check-In Status"] || "").toLowerCase() === "checked in",
+            checkInTime: r["Check-In Time"] || "",
+            emailSent: String(r["Email Sent"] || "").toLowerCase() === "yes",
+            registeredAt: new Date().toISOString()
+          };
+          await pushGuestToCloud(guest);
+          imported++;
+        }
+        showToast("Imported & synced " + imported + " guests to cloud!", "success");
+        event.target.value = "";
+      };
+      reader.readAsBinaryString(file);
+    }
+
+    function switchTab(tab) {
+      ["register", "scanner", "dashboard"].forEach(function (t) {
+        document.getElementById("view-" + t).classList.toggle("hidden", t !== tab);
+        var btn = document.getElementById("tab-" + t);
+        if (t === tab) {
+          btn.className = "tab-btn px-4 py-2.5 text-sm font-semibold rounded-t-lg bg-slate-50 text-red-900 flex items-center gap-2 whitespace-nowrap";
+        } else {
+          btn.className = "tab-btn px-4 py-2.5 text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-2 whitespace-nowrap";
+        }
+      });
+      if (tab !== "scanner") stopCameraScanner();
+    }
+
+    function openEmailTemplateModal() {
+      document.getElementById("emailModal").classList.remove("hidden");
+    }
+
+    function copyTemplateHtml() {
+      var ta = document.getElementById("emailTemplateCode");
+      ta.select();
+      document.execCommand("copy");
+      showToast("EmailJS HTML template copied!", "success");
+    }
+
+    function showToast(msg, type) {
+      var box = document.getElementById("toastBox");
+      var el = document.createElement("div");
+      var colors = type === "success" ? "bg-emerald-800" : type === "warning" ? "bg-amber-700" : "bg-slate-800";
+      el.className = colors + " text-white text-xs font-semibold px-4 py-3 rounded-xl shadow-lg transition-opacity";
+      el.textContent = msg;
+      box.appendChild(el);
+      setTimeout(function () { el.style.opacity = "0"; setTimeout(function () { el.remove(); }, 300); }, 3500);
+    }
+
+    if (window.lucide) lucide.createIcons();
+    persistLocalAndRender();
+    syncFromCloud(false);
+    setInterval(function () { syncFromCloud(false); }, 4000);
+  </script>
+</body>
+</html>
