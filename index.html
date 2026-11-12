@@ -422,7 +422,7 @@
       isSyncingNow = true;
 
       try {
-        var res = await fetch(REST_BASE_URL + "&pageSize=500&_t=" + Date.now(), { cache: "no-store" });
+        var res = await fetch(REST_BASE_URL + "&pageSize=500", { cache: "no-store" });
         if (res.status === 403) {
           setSyncBadge("blocked", "Error 403: Blocked", "<strong>Firestore Rules or API Key Blocked (403):</strong> Open Firebase Console &rarr; Firestore &rarr; Rules and publish <code>allow read, write: if true;</code>");
           isSyncingNow = false;
