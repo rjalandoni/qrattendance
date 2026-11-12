@@ -1,194 +1,374 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Christmas Party 2026 — QR Attendance & Check-In</title>
-
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <!-- QRCode.js (Visual Ticket Generator) -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-
-  <!-- HTML5-QRCode (Webcam Scanner) -->
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-
-  <!-- SheetJS (Excel .xlsx Import & Export) -->
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-
-  <!-- EmailJS SDK -->
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+<!-- Universal Mobile + Desktop Cloud Sync Engine (No Module Blockers) -->
   <script>
-    window.EMAILJS_CONFIG = {
-      publicKey: "kqIzEf-5-Noa9NWNR",
-      serviceId: "service_h3hfprm",
-      templateId: "template_n9u8619"
+    const FIREBASE_PROJECT_ID = "qrattendance-39ba7";
+    const FIREBASE_API_KEY = "AIzaSyA_mpRuJB1Dl1LE_8dVuuRnpvp3uaTiU0Y";
+    const COLLECTION_NAME = "christmas_guests";
+    const REST_BASE_URL = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + COLLECTION_NAME + "?key=" + FIREBASE_API_KEY;
+    const LOCAL_KEY = "xmas_2026_guests_cache";
+
+    let guests = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]");
+    let currentPassGuest = null;
+    let html5QrScanner = null;
+    let isSyncingNow = false;
+
+    function toFirestoreFields(obj) {
+      const fields = {};
+      for (const k in obj) {
+        const v = obj[k];
+        if (typeof v === "boolean") fields[k] = { booleanValue: v };
+        else if (typeof v === "number") fields[k] = { integerValue: String(v) };
+        else fields[k] = { stringValue: v == null ? "" : String(v) };
+      }
+      return { fields: fields };
+    }
+
+    function fromFirestoreDoc(docObj) {
+      const f = docObj.fields || {};
+      const out = {};
+      for (const k in f) {
+        const val = f[k];
+        if ("stringValue" in val) out[k] = val.stringValue;
+        else if ("booleanValue" in val) out[k] = val.booleanValue;
+        else if ("integerValue" in val) out[k] = Number(val.integerValue);
+      }
+      if (!out.id && docObj.name) {
+        out.id = docObj.name.split("/").pop();
+      }
+      return out;
+    }
+
+    function setSyncBadge(state, label) {
+      const badge = document.getElementById("syncBadge");
+      const dot = document.getElementById("syncDot");
+      const text = document.getElementById("syncText");
+      const alertBanner = document.getElementById("rulesAlertBanner");
+
+      text.textContent = label;
+      alertBanner.classList.add("hidden");
+
+      if (state === "live") {
+        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/25 border border-emerald-300/50 text-emerald-100";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+      } else if (state === "blocked") {
+        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/30 border border-red-200 text-white";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-red-300 animate-ping";
+        alertBanner.classList.remove("hidden");
+      } else {
+        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/20 border border-amber-300/40 text-amber-100";
+        dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+      }
+    }
+
+    function persistLocalAndRender() {
+      guests.sort((a, b) => (b.registeredAt || "").localeCompare(a.registeredAt || ""));
+      localStorage.setItem(LOCAL_KEY, JSON.stringify(guests));
+      document.getElementById("navCountBadge").textContent = guests.length;
+      renderDashboard();
+      renderRecentScans();
+    }
+
+    async function syncFromCloud(showNotification) {
+      if (isSyncingNow) return;
+      isSyncingNow = true;
+
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+      try {
+        const res = await fetch(REST_BASE_URL + "&pageSize=500&_t=" + Date.now(), {
+          signal: controller.signal,
+          cache: "no-store"
+        });
+        clearTimeout(timeoutId);
+
+        if (res.status === 403) {
+          setSyncBadge("blocked", "Rules Blocked (Check Console)");
+          isSyncingNow = false;
+          return;
+        }
+        if (!res.ok) throw new Error("HTTP " + res.status);
+
+        const data = await res.json();
+        const remoteList = (data.documents || []).map(fromFirestoreDoc);
+
+        // Push any local-only guests up to cloud
+        const remoteIds = new Set(remoteList.map(g => g.id));
+        for (const localGuest of guests) {
+          if (localGuest.id && !remoteIds.has(localGuest.id)) {
+            await pushGuestToCloud(localGuest);
+            remoteList.push(localGuest);
+          }
+        }
+
+        guests = remoteList;
+        setSyncBadge("live", "Synced (" + guests.length + " Guests)");
+        persistLocalAndRender();
+        if (showNotification) showToast("Synced " + guests.length + " guests from cloud!", "success");
+      } catch (err) {
+        clearTimeout(timeoutId);
+        setSyncBadge("connecting", "Retrying Network...");
+        if (showNotification) showToast("Network timeout — check mobile data/Wi-Fi", "warning");
+      } finally {
+        isSyncingNow = false;
+      }
+    }
+
+    async function pushGuestToCloud(guest) {
+      const idx = guests.findIndex(g => g.id === guest.id);
+      if (idx >= 0) guests[idx] = guest;
+      else guests.unshift(guest);
+      persistLocalAndRender();
+
+      const docUrl = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + COLLECTION_NAME + "/" + encodeURIComponent(guest.id) + "?key=" + FIREBASE_API_KEY;
+      try {
+        const res = await fetch(docUrl, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(toFirestoreFields(guest))
+        });
+        if (res.status === 403) {
+          setSyncBadge("blocked", "Rules Blocked (Check Console)");
+        } else if (res.ok) {
+          setSyncBadge("live", "Synced (" + guests.length + " Guests)");
+        }
+      } catch (err) {
+        setSyncBadge("connecting", "Offline (Saved Locally)");
+      }
+    }
+
+    async function deleteGuestFromCloud(guestId) {
+      guests = guests.filter(g => g.id !== guestId);
+      persistLocalAndRender();
+      const docUrl = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + COLLECTION_NAME + "/" + encodeURIComponent(guestId) + "?key=" + FIREBASE_API_KEY;
+      await fetch(docUrl, { method: "DELETE" }).catch(() => {});
+    }
+
+    window.forceCloudSync = () => {
+      setSyncBadge("connecting", "Syncing...");
+      syncFromCloud(true);
     };
-    (function () {
-      if (window.emailjs && window.EMAILJS_CONFIG.publicKey) {
-        emailjs.init({ publicKey: window.EMAILJS_CONFIG.publicKey });
-      }
-    })();
-  </script>
 
-  <style>
-    @media print {
-      body * { visibility: hidden; }
-      #printablePass, #printablePass * { visibility: visible; }
-      #printablePass {
-        position: fixed;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        width: 360px;
-        border: 2px solid #991b1b;
-        box-shadow: none;
+    function getPublicQrUrl(guestId) {
+      return "https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=10&data=" + encodeURIComponent(guestId);
+    }
+
+    async function sendQrEmail(guest) {
+      const qrUrl = getPublicQrUrl(guest.id);
+      const templateParams = {
+        to_name: guest.name,
+        to_email: guest.email,
+        guest_id: guest.id,
+        guest_type: guest.type,
+        table_info: guest.table || "Open Seating",
+        event_name: "Christmas Party 2026",
+        qr_code_url: qrUrl,
+        qr_image_url: qrUrl,
+        message: "Hi " + guest.name + ", your Christmas Party QR Pass ID is " + guest.id + ". View QR: " + qrUrl
+      };
+
+      try {
+        await emailjs.send(
+          window.EMAILJS_CONFIG.serviceId,
+          window.EMAILJS_CONFIG.templateId,
+          templateParams
+        );
+        guest.emailSent = true;
+        await pushGuestToCloud(guest);
+        showToast("QR Pass emailed to " + guest.email + "!", "success");
+      } catch (err) {
+        showToast("Registered, but email failed: " + (err && err.text ? err.text : "Check EmailJS"), "warning");
       }
     }
-    .festive-bg {
-      background: radial-gradient(circle at top right, #991b1b 0%, #7f1d1d 45%, #14532d 100%);
+
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const name = document.getElementById("guestName").value.trim();
+      const email = document.getElementById("guestEmail").value.trim();
+      const type = document.getElementById("guestType").value;
+      const table = document.getElementById("guestTable").value.trim();
+      const shouldEmail = document.getElementById("autoSendEmail").checked;
+
+      const randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
+      const guest = {
+        id: "XMAS-2026-" + randomCode,
+        name: name,
+        email: email,
+        type: type,
+        table: table,
+        checkedIn: false,
+        checkInTime: "",
+        emailSent: false,
+        registeredAt: new Date().toISOString()
+      };
+
+      renderPassPreview(guest);
+      await pushGuestToCloud(guest);
+      showToast("Registered & synced " + guest.name + "!", "success");
+
+      if (shouldEmail) {
+        await sendQrEmail(guest);
+      }
+
+      e.target.reset();
+      document.getElementById("autoSendEmail").checked = true;
+    });
+
+    function renderPassPreview(guest) {
+      currentPassGuest = guest;
+      const container = document.getElementById("qrCanvasContainer");
+      container.innerHTML = "";
+      new QRCode(container, {
+        text: guest.id,
+        width: 180,
+        height: 180,
+        colorDark: "#7f1d1d",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
+
+      document.getElementById("passBadgeType").textContent = guest.type.toUpperCase();
+      document.getElementById("passGuestName").textContent = guest.name;
+      document.getElementById("passGuestEmail").textContent = guest.email;
+      document.getElementById("passGuestId").textContent = guest.id;
+      document.getElementById("passActions").classList.remove("hidden");
     }
-  </style>
-</head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-  <!-- Header -->
-  <header class="festive-bg text-white shadow-lg sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="bg-amber-400 text-red-950 p-2.5 rounded-xl shadow-md">
-          <i data-lucide="sparkles" class="w-6 h-6"></i>
-        </div>
-        <div>
-          <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Christmas Party 2026</h1>
-          <p class="text-xs sm:text-sm text-amber-200/90">Multi-Device QR Registration, Email Pass & Check-In</p>
-        </div>
-      </div>
+    function resendCurrentPassEmail() {
+      if (currentPassGuest) sendQrEmail(currentPassGuest);
+    }
 
-      <!-- Sync Status & Manual Force Sync -->
-      <div class="flex items-center gap-2.5">
-        <div id="syncBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/20 border border-amber-300/40 text-amber-100">
-          <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-          <span id="syncText">Connecting to Cloud...</span>
-        </div>
-        <button onclick="window.forceCloudSync()" title="Force Sync Now" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-xs font-semibold transition border border-white/20">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          <span>Sync Now</span>
-        </button>
-      </div>
-    </div>
+    function downloadCurrentQrPng() {
+      if (!currentPassGuest) return;
+      const canvas = document.querySelector("#qrCanvasContainer canvas");
+      if (!canvas) return;
+      const link = document.createElement("a");
+      link.download = currentPassGuest.id + "_" + currentPassGuest.name.replace(/\s+/g, "_") + ".png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+    }
 
-    <!-- Navigation Tabs -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-2 border-t border-white/15 pt-2">
-      <button onclick="switchTab('register')" id="tab-register" class="tab-btn px-4 py-2.5 text-sm font-semibold rounded-t-lg bg-slate-50 text-red-900 flex items-center gap-2 transition">
-        <i data-lucide="user-plus" class="w-4 h-4"></i>
-        <span>1. Register & Send QR</span>
-      </button>
-      <button onclick="switchTab('scanner')" id="tab-scanner" class="tab-btn px-4 py-2.5 text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-2 transition">
-        <i data-lucide="scan-line" class="w-4 h-4"></i>
-        <span>2. Staff QR Scanner</span>
-      </button>
-      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn px-4 py-2.5 text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-2 transition">
-        <i data-lucide="users" class="w-4 h-4"></i>
-        <span>3. Guest List & Excel</span>
-        <span id="navCountBadge" class="ml-1 px-2 py-0.5 text-xs rounded-full bg-amber-400 text-red-950 font-bold">0</span>
-      </button>
-    </div>
-  </header>
+    function playBeep(success) {
+      try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = success ? "sine" : "sawtooth";
+        osc.frequency.setValueAtTime(success ? 880 : 220, ctx.currentTime);
+        if (success) osc.frequency.setValueAtTime(1174.66, ctx.currentTime + 0.12);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start();
+        osc.stop(ctx.currentTime + 0.25);
+      } catch (e) {}
+    }
 
-  <!-- Diagnostic Alert Banner (Shown only if Firestore Rules block access) -->
-  <div id="rulesAlertBanner" class="hidden bg-red-600 text-white px-4 py-3 text-sm">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-      <div class="flex items-center gap-2">
-        <i data-lucide="alert-triangle" class="w-5 h-5 shrink-0"></i>
-        <span><strong>Firestore Rules Blocked:</strong> Open Firebase Console &rarr; Firestore &rarr; Rules and publish <code class="bg-red-800 px-1.5 py-0.5 rounded">allow read, write: if true;</code> so all devices can sync.</span>
-      </div>
-      <a href="https://console.firebase.google.com/project/qrattendance-39ba7/firestore/rules" target="_blank" class="underline font-bold hover:text-amber-200">Open Firestore Rules &rarr;</a>
-    </div>
-  </div>
+    async function handleCheckInScan(rawCode) {
+      const code = (rawCode || "").trim().toUpperCase();
+      if (!code) return;
 
-  <!-- Main Content -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+      // Refresh from cloud right before validating scan so phone has latest registrations
+      await syncFromCloud(false);
 
-    <!-- TAB 1: GUEST REGISTRATION -->
-    <section id="view-register" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <!-- Registration Form -->
-      <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
-          <div>
-            <h2 class="text-lg font-bold text-slate-900">New Guest Registration</h2>
-            <p class="text-xs text-slate-500">Generates a unique QR pass, syncs across all devices, and emails the QR image.</p>
-          </div>
-          <button type="button" onclick="openEmailTemplateModal()" class="text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 flex items-center gap-1.5">
-            <i data-lucide="code" class="w-3.5 h-3.5"></i>
-            <span>EmailJS HTML Setup</span>
-          </button>
-        </div>
+      const resultBox = document.getElementById("scanResultBox");
+      const guest = guests.find(g => g.id.toUpperCase() === code);
 
-        <form id="registerForm" class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
-              <input type="text" id="guestName" required placeholder="e.g., Juan Dela Cruz"
-                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none text-sm" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address (for QR Pass) *</label>
-              <input type="email" id="guestEmail" required placeholder="guest@example.com"
-                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 focus:border-red-600 outline-none text-sm" />
-            </div>
-          </div>
+      if (!guest) {
+        playBeep(false);
+        resultBox.className = "bg-red-50 rounded-2xl shadow-sm border-2 border-red-500 p-6 text-center";
+        resultBox.innerHTML = '<h3 class="text-lg font-extrabold text-red-800">Invalid QR Code</h3><p class="text-sm text-red-700 mt-1">No guest found for ID <span class="font-mono font-bold">' + code + '</span></p>';
+        return;
+      }
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Guest Category</label>
-              <select id="guestType" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm bg-white">
-                <option value="Regular Guest">Regular Guest</option>
-                <option value="VIP">VIP</option>
-                <option value="Employee / Staff">Employee / Staff</option>
-                <option value="Plus One (+1)">Plus One (+1)</option>
-                <option value="Performer / Speaker">Performer / Speaker</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Department / Table No.</label>
-              <input type="text" id="guestTable" placeholder="e.g., Table 4 / Marketing"
-                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
-            </div>
-          </div>
+      if (guest.checkedIn) {
+        playBeep(false);
+        resultBox.className = "bg-amber-50 rounded-2xl shadow-sm border-2 border-amber-500 p-6 text-center";
+        resultBox.innerHTML = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-amber-200 text-amber-900">ALREADY CHECKED IN</span><h3 class="text-xl font-extrabold text-slate-900 mt-2">' + guest.name + '</h3><p class="text-xs text-slate-600 mt-1">Checked in at ' + guest.checkInTime + '</p>';
+        return;
+      }
 
-          <div class="flex items-center gap-2 pt-1">
-            <input type="checkbox" id="autoSendEmail" checked class="w-4 h-4 text-red-700 rounded border-slate-300 focus:ring-red-600" />
-            <label for="autoSendEmail" class="text-sm text-slate-700 font-medium">
-              Automatically send QR code image to guest's email via EmailJS
-            </label>
-          </div>
+      guest.checkedIn = true;
+      guest.checkInTime = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+      await pushGuestToCloud(guest);
 
-          <div class="pt-2 flex flex-wrap items-center gap-3">
-            <button type="submit" id="registerBtn" class="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold text-sm shadow-sm flex items-center justify-center gap-2 transition">
-              <i data-lucide="qr-code" class="w-4 h-4"></i>
-              <span>Generate Pass & Sync</span>
-            </button>
-          </div>
-        </form>
-      </div>
+      playBeep(true);
+      resultBox.className = "bg-emerald-50 rounded-2xl shadow-sm border-2 border-emerald-600 p-6 text-center";
+      resultBox.innerHTML = '<span class="px-3 py-1 rounded-full text-xs font-bold bg-emerald-200 text-emerald-900">WELCOME TO THE PARTY!</span><h3 class="text-2xl font-extrabold text-emerald-950 mt-2">' + guest.name + '</h3><p class="text-sm font-semibold text-emerald-800">' + guest.type + (guest.table ? " • " + guest.table : "") + '</p><p class="text-xs text-emerald-700 mt-1">Checked in at ' + guest.checkInTime + '</p>';
+    }
 
-      <!-- Digital Pass Preview Card -->
-      <div class="lg:col-span-5">
-        <div id="printablePass" class="bg-white rounded-2xl shadow-md border-2 border-red-800/20 overflow-hidden">
-          <div class="festive-bg text-white px-6 py-4 text-center">
-            <p class="text-[11px] uppercase tracking-widest text-amber-300 font-bold">Official Event Pass</p>
-            <h3 class="text-lg font-extrabold mt-0.5">Christmas Party 2026</h3>
-          </div>
+    let lastScanText = "";
+    let lastScanTime = 0;
 
-          <div class="p-6 flex flex-col items-center text-center">
-            <div id="qrCanvasContainer" class="p-3 bg-white border-2 border-dashed border-red-300 rounded-2xl shadow-inner min-h-[204px] min-w-[204px] flex items-center justify-center">
-              <p class="text-xs text-slate-400 max-w-[160px]">Register a guest to preview their scannable QR pass</p>
-            </div>
+    function startCameraScanner() {
+      document.getElementById("startCamBtn").classList.add("hidden");
+      document.getElementById("stopCamBtn").classList.remove("hidden");
 
-            <div class="mt-4 space-y-1">
-              <span id="passBadgeType" class="inline-block px-3 py-0.5 rounded-full text-xs font-bold
+      html5QrScanner = new Html5Qrcode("reader");
+      html5QrScanner.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 220, height: 220 } },
+        (decodedText) => {
+          const now = Date.now();
+          if (decodedText === lastScanText && now - lastScanTime < 3000) return;
+          lastScanText = decodedText;
+          lastScanTime = now;
+          handleCheckInScan(decodedText);
+        },
+        () => {}
+      ).catch(() => {
+        showToast("Camera permission denied or requires HTTPS", "warning");
+        stopCameraScanner();
+      });
+    }
+
+    function stopCameraScanner() {
+      if (html5QrScanner) {
+        html5QrScanner.stop().catch(() => {});
+        html5QrScanner = null;
+      }
+      document.getElementById("reader").innerHTML = 'Click "Start Camera" to scan attendee passes';
+      document.getElementById("startCamBtn").classList.remove("hidden");
+      document.getElementById("stopCamBtn").classList.add("hidden");
+    }
+
+    function renderDashboard() {
+      const q = (document.getElementById("searchInput").value || "").toLowerCase();
+      const filter = document.getElementById("filterStatus").value;
+
+      const checkedCount = guests.filter(g => g.checkedIn).length;
+      document.getElementById("statTotal").textContent = guests.length;
+      document.getElementById("statCheckedIn").textContent = checkedCount;
+      document.getElementById("statPending").textContent = guests.length - checkedCount;
+
+      const filtered = guests.filter(g => {
+        const matchesQuery =
+          (g.name || "").toLowerCase().includes(q) ||
+          (g.email || "").toLowerCase().includes(q) ||
+          (g.id || "").toLowerCase().includes(q);
+        if (!matchesQuery) return false;
+        if (filter === "checked_in") return g.checkedIn;
+        if (filter === "pending") return !g.checkedIn;
+        return true;
+      });
+
+      const tbody = document.getElementById("guestTableBody");
+      if (!filtered.length) {
+        tbody.innerHTML = '<tr><td colspan="6" class="py-8 text-center text-slate-400">No matching guests found.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(g => {
+        const emailBadge = g.emailSent
+          ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Sent</span>'
+          : '<button onclick="triggerResend(\'' + g.id + '\')" class="px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold">Send QR</button>';
+        const statusBadge = g.checkedIn
+          ? '<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">Checked In (' + g.checkInTime + ')</span>'
+          : '<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">Pending</span>';
+
+        return '<tr class="hover:bg-slate-50">' +
+          '<td class="py-3 px-4 font-mono text-xs font-bold text-red-700">' + g.id + '</td>' +
+          '<td class="py-3 px-4"><div class="font-semibold text-slate-900">' + g.name + '</div><div class="text-xs text-slate-500">' + g.email + '</div></td>' +
+          '<td class="py-3 px-4 text-xs"><span class="font-semibold text-slate-700">' + g.type + '</span>' + (g.table ? '<div class="text-slate-400">' + g.table + '</div>' : '') + '</td>' +
+          '<td class="py-3 px-4 text-xs">' + emailBadge + '</td>' +
+          '<td class="py-3 px-4 text-xs">' + statusBadge + '</td>' +
+          '<td class="py-3 px-4 text-right space-x-1">'
