@@ -509,6 +509,7 @@
     }
 
     // Delete All Records from Firestore Cloud & Local Storage
+    // Delete All Records from Firestore Cloud & Local Storage
     async function deleteAllRecords() {
       if (!guests.length) {
         showToast("Guest list is already empty.", "warning");
@@ -522,23 +523,24 @@
       var btn = document.getElementById("deleteAllBtn");
       var originalHtml = btn.innerHTML;
       btn.disabled = true;
-      btn.innerHTML = '<span>Deleting ' + count + ' records...</span>';
+      btn.innerHTML = '<span>Deleting ' + count + '...</span>';
 
       var idsToDelete = guests.map(function (g) { return g.id; });
       guests = [];
       currentPassGuest = null;
       currentPassDataUrl = null;
+      try { localStorage.removeItem(LOCAL_KEY); } catch (e) {}
       persistLocalAndRender();
 
       try {
-        await Promise.all(idsToDelete.map(function (id) {
-          var docUrl = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + COLLECTION_NAME + "/" + encodeURIComponent(id) + "?key=" + FIREBASE_API_KEY;
-          return fetch(docUrl, { method: "DELETE" }).catch(function () {});
-        }));
+        for (var i = 0; i < idsToDelete.length; i++) {
+          var docUrl = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + COLLECTION_NAME + "/" + encodeURIComponent(idsToDelete[i]) + "?key=" + FIREBASE_API_KEY;
+          await fetch(docUrl, { method: "DELETE" }).catch(function () {});
+        }
         setSyncBadge("live", "Synced (0 Guests)");
         showToast("Deleted all " + count + " guest records.", "success");
       } catch (err) {
-        showToast("Cleared locally; some cloud items may still be syncing.", "warning");
+        showToast("Cleared locally; check connection.", "warning");
       } finally {
         isSyncingNow = false;
         btn.disabled = false;
