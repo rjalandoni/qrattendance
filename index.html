@@ -1,566 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Christmas Party 2026 — QR Attendance & Live Scoring</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-  <script>
-    window.EMAILJS_CONFIG = {
-      publicKey: "kqIzEf-5-Noa9NWNR",
-      serviceId: "service_h3hfprm",
-      templateId: "template_n9u8619"
-    };
-    window.addEventListener("DOMContentLoaded", function () {
-      if (window.emailjs && window.EMAILJS_CONFIG.publicKey) {
-        emailjs.init({ publicKey: window.EMAILJS_CONFIG.publicKey });
-      }
-    });
-  </script>
-  <style>
-    @media print {
-      body * { visibility: hidden; }
-      #printablePass, #printablePass * { visibility: visible; }
-      #printablePass {
-        position: fixed;
-        left: 50%;
-        top: 50%;
-        transform: translate(-50%, -50%);
-        width: 360px;
-        border: 2px solid #991b1b;
-      }
-    }
-    .festive-bg {
-      background: linear-gradient(90deg, #14532d 0%, #4a2518 45%, #8b1515 100%);
-    }
-  </style>
-</head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
-
-  <!-- Header -->
-  <header class="festive-bg text-white shadow-lg sticky top-0 z-30">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-4">
-      <div class="flex items-center gap-3">
-        <div class="bg-amber-400 text-red-950 p-2.5 rounded-xl shadow-md">
-          <i data-lucide="sparkles" class="w-6 h-6"></i>
-        </div>
-        <div>
-          <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Christmas Party 2026</h1>
-          <p class="text-xs sm:text-sm text-amber-200/90">QR Registration, Official Pass Email, Check-In & Live Contest Scoring</p>
-        </div>
-      </div>
-
-      <div class="flex items-center gap-2.5">
-        <div id="syncBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/20 border border-amber-300/40 text-amber-100">
-          <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
-          <span id="syncText">Connecting...</span>
-        </div>
-        <button onclick="forceCloudSync()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-xs font-semibold transition border border-white/20">
-          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
-          <span>Sync Now</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Navigation Tabs -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-1.5 border-t border-white/15 pt-2 overflow-x-auto">
-      <button onclick="switchTab('register')" id="tab-register" class="tab-btn px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg bg-slate-50 text-red-900 flex items-center gap-1.5 whitespace-nowrap">
-        <i data-lucide="user-plus" class="w-4 h-4"></i>
-        <span>1. Register & QR</span>
-      </button>
-      <button onclick="switchTab('scanner')" id="tab-scanner" class="tab-btn px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-1.5 whitespace-nowrap">
-        <i data-lucide="scan-line" class="w-4 h-4"></i>
-        <span>2. QR Scanner</span>
-      </button>
-      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-1.5 whitespace-nowrap">
-        <i data-lucide="users" class="w-4 h-4"></i>
-        <span>3. Guest List</span>
-        <span id="navCountBadge" class="ml-1 px-2 py-0.5 text-xs rounded-full bg-amber-400 text-red-950 font-bold">0</span>
-      </button>
-      <button onclick="switchTab('judge')" id="tab-judge" class="tab-btn px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-1.5 whitespace-nowrap">
-        <i data-lucide="clipboard-check" class="w-4 h-4"></i>
-        <span>4. Judge Scoring</span>
-      </button>
-      <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="tab-btn px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-1.5 whitespace-nowrap">
-        <i data-lucide="trophy" class="w-4 h-4"></i>
-        <span>5. Leaderboard & Setup</span>
-        <span id="navContestantBadge" class="ml-1 px-2 py-0.5 text-xs rounded-full bg-emerald-400 text-emerald-950 font-bold">0</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- Firestore Diagnostic Alert Banner -->
-  <div id="rulesAlertBanner" class="hidden bg-red-600 text-white px-4 py-3 text-sm">
-    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
-      <span id="rulesAlertText"><strong>Firestore Connection Blocked:</strong> Check Firestore Rules in Firebase Console.</span>
-      <a href="https://console.firebase.google.com/project/qrattendance-39ba7/firestore/rules" target="_blank" class="underline font-bold">Open Firestore Rules &rarr;</a>
-    </div>
-  </div>
-
-  <!-- Hidden staging container for raw QR generation -->
-  <div id="hiddenQrStage" class="hidden"></div>
-
-  <!-- Main Content -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
-
-    <!-- ========================================================= -->
-    <!-- TAB 1: REGISTRATION                                       -->
-    <!-- ========================================================= -->
-    <section id="view-register" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
-          <div>
-            <h2 class="text-lg font-bold text-slate-900">New Guest Registration</h2>
-            <p class="text-xs text-slate-500">Generates the Official Event Pass, syncs across devices, and emails the pass card.</p>
-          </div>
-          <button type="button" onclick="openEmailTemplateModal()" class="text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 flex items-center gap-1.5">
-            <i data-lucide="mail" class="w-3.5 h-3.5"></i>
-            <span>EmailJS HTML Template</span>
-          </button>
-        </div>
-
-        <form id="registerForm" class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
-              <input type="text" id="guestName" required placeholder="e.g., Rob Ben"
-                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address (for Official Pass) *</label>
-              <input type="email" id="guestEmail" required placeholder="guest@example.com"
-                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
-            </div>
-          </div>
-
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Guest Category</label>
-              <select id="guestType" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm bg-white">
-                <option value="Employee / Staff">Employee / Staff</option>
-                <option value="Regular Guest">Regular Guest</option>
-                <option value="VIP">VIP</option>
-                <option value="Plus One (+1)">Plus One (+1)</option>
-                <option value="Performer / Speaker">Performer / Speaker</option>
-              </select>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Department / Table No. (Optional)</label>
-              <input type="text" id="guestTable" placeholder="e.g., Table 4 / Marketing"
-                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
-            </div>
-          </div>
-
-          <div class="flex items-center gap-2 pt-1">
-            <input type="checkbox" id="autoSendEmail" checked class="w-4 h-4 text-red-700 rounded border-slate-300" />
-            <label for="autoSendEmail" class="text-sm text-slate-700 font-medium">
-              Send Official Event Pass email via EmailJS automatically
-            </label>
-          </div>
-
-          <div class="pt-2">
-            <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold text-sm shadow-sm flex items-center justify-center gap-2 transition">
-              <i data-lucide="qr-code" class="w-4 h-4"></i>
-              <span>Generate Official Pass & Email</span>
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <!-- Official Event Pass Preview -->
-      <div class="lg:col-span-5">
-        <div id="printablePass" class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden max-w-[380px] mx-auto">
-          <div class="festive-bg text-white px-6 py-5 text-center">
-            <p class="text-[11px] uppercase tracking-widest text-amber-400 font-bold">OFFICIAL EVENT PASS</p>
-            <h3 class="text-xl font-extrabold mt-1">Christmas Party 2026</h3>
-          </div>
-          <div class="p-6 flex flex-col items-center text-center">
-            <div id="qrCanvasContainer" class="p-3.5 bg-white border-2 border-dashed border-rose-300 rounded-2xl min-h-[212px] min-w-[212px] flex items-center justify-center">
-              <p class="text-xs text-slate-400 max-w-[170px]">Register a guest to generate their Official Event Pass</p>
-            </div>
-            <div class="mt-5 space-y-1.5">
-              <span id="passBadgeType" class="inline-block px-3.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 tracking-wide">EMPLOYEE / STAFF</span>
-              <h4 id="passGuestName" class="text-2xl font-extrabold text-slate-900 pt-0.5">Guest Name</h4>
-              <p id="passGuestEmail" class="text-xs text-slate-500">guest@example.com</p>
-              <p id="passGuestId" class="font-mono text-sm font-bold text-red-700 pt-1">XMAS-2026-XXXX</p>
-            </div>
-            <div id="passActions" class="hidden mt-5 pt-4 border-t border-slate-100 w-full flex flex-wrap justify-center gap-2">
-              <button type="button" onclick="resendCurrentPassEmail()" class="px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
-                <i data-lucide="send" class="w-3.5 h-3.5"></i>
-                <span>Resend Email</span>
-              </button>
-              <button type="button" onclick="downloadCurrentQrPng()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5">
-                <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                <span>Save Pass PNG</span>
-              </button>
-              <button type="button" onclick="window.print()" class="px-3.5 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5">
-                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
-                <span>Print</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ========================================================= -->
-    <!-- TAB 2: STAFF QR SCANNER                                   -->
-    <!-- ========================================================= -->
-    <section id="view-scanner" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h2 class="text-lg font-bold text-slate-900">Camera QR Scanner</h2>
-            <p class="text-xs text-slate-500">Point camera at attendee's QR code to check them in.</p>
-          </div>
-          <div class="flex gap-2">
-            <button id="startCamBtn" onclick="startCameraScanner()" class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
-              <i data-lucide="camera" class="w-4 h-4"></i>
-              <span>Start Camera</span>
-            </button>
-            <button id="stopCamBtn" onclick="stopCameraScanner()" class="hidden px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5">
-              <i data-lucide="camera-off" class="w-4 h-4"></i>
-              <span>Stop</span>
-            </button>
-          </div>
-        </div>
-
-        <div id="reader" class="w-full rounded-xl overflow-hidden bg-slate-900 min-h-[280px] flex items-center justify-center text-slate-400 text-sm">
-          Click "Start Camera" to scan attendee passes
-        </div>
-
-        <div class="mt-5 pt-4 border-t border-slate-100">
-          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Manual Guest ID Entry / USB Scanner</label>
-          <div class="flex gap-2">
-            <input type="text" id="manualCodeInput" placeholder="Enter XMAS-2026-XXXX..."
-              onkeydown="if(event.key==='Enter'){ handleCheckInScan(this.value); this.value=''; }"
-              class="flex-1 px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-mono uppercase outline-none" />
-            <button onclick="var el=document.getElementById('manualCodeInput'); handleCheckInScan(el.value); el.value='';"
-              class="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">
-              Check In
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="lg:col-span-6 space-y-6">
-        <div id="scanResultBox" class="bg-white rounded-2xl shadow-sm border-2 border-slate-200 p-6 text-center">
-          <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
-            <i data-lucide="qr-code" class="w-7 h-7"></i>
-          </div>
-          <h3 class="text-base font-bold text-slate-800">Ready for Check-In</h3>
-          <p class="text-xs text-slate-500 mt-1">Scan results update all connected devices in real time.</p>
-        </div>
-
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
-          <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
-            <i data-lucide="clock" class="w-4 h-4 text-emerald-700"></i>
-            <span>Recent Live Check-Ins</span>
-          </h3>
-          <div id="recentScansList" class="space-y-2 text-sm text-slate-500">
-            No check-ins recorded yet.
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ========================================================= -->
-    <!-- TAB 3: GUEST DIRECTORY & EXCEL                            -->
-    <!-- ========================================================= -->
-    <section id="view-dashboard" class="hidden space-y-6">
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <p class="text-xs font-semibold text-slate-500 uppercase">Total Registered</p>
-          <p id="statTotal" class="text-3xl font-extrabold text-slate-900 mt-1">0</p>
-        </div>
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <p class="text-xs font-semibold text-emerald-700 uppercase">Checked In</p>
-          <p id="statCheckedIn" class="text-3xl font-extrabold text-emerald-700 mt-1">0</p>
-        </div>
-        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-          <p class="text-xs font-semibold text-amber-700 uppercase">Awaiting Arrival</p>
-          <p id="statPending" class="text-3xl font-extrabold text-amber-600 mt-1">0</p>
-        </div>
-      </div>
-
-      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
-        <div class="flex flex-wrap items-center gap-2 flex-1 min-w-[240px]">
-          <input type="text" id="searchInput" oninput="renderDashboard()" placeholder="Search name, email, or QR ID..."
-            class="px-3.5 py-2 rounded-xl border border-slate-300 text-sm w-full sm:w-64 outline-none" />
-          <select id="filterStatus" onchange="renderDashboard()" class="px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white">
-            <option value="all">All Guests</option>
-            <option value="checked_in">Checked In Only</option>
-            <option value="pending">Not Yet Arrived</option>
-          </select>
-        </div>
-
-        <div class="flex flex-wrap items-center gap-2">
-          <label class="cursor-pointer px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5">
-            <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-700"></i>
-            <span>Import Excel (.xlsx)</span>
-            <input type="file" id="excelUploadInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="importExcelFile(event)" />
-          </label>
-          <button onclick="exportExcelFile()" class="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
-            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-            <span>Export Excel (.xlsx)</span>
-          </button>
-          <button id="deleteAllBtn" onclick="deleteAllRecords()" class="px-3.5 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-semibold flex items-center gap-1.5">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            <span>Delete All Records</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase text-slate-500 font-bold">
-              <th class="py-3.5 px-4">Guest ID</th>
-              <th class="py-3.5 px-4">Attendee</th>
-              <th class="py-3.5 px-4">Category / Table</th>
-              <th class="py-3.5 px-4">Email Status</th>
-              <th class="py-3.5 px-4">Attendance</th>
-              <th class="py-3.5 px-4 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody id="guestTableBody" class="divide-y divide-slate-100 text-sm">
-            <tr>
-              <td colspan="6" class="py-8 text-center text-slate-400">Loading guest list...</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <!-- ========================================================= -->
-    <!-- TAB 4: JUDGE SCORING PAD                                  -->
-    <!-- ========================================================= -->
-    <section id="view-judge" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
-      <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-        <div class="pb-4 mb-5 border-b border-slate-100">
-          <h2 class="text-lg font-bold text-slate-900">Submit Contest Judge Score</h2>
-          <p class="text-xs text-slate-500">Select your judge name and contestant/team, then enter scores per criterion.</p>
-        </div>
-
-        <form id="scoreForm" class="space-y-4">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Judge Name / Station *</label>
-              <input type="text" id="judgeNameInput" required placeholder="e.g., Judge 1 - Maria"
-                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Select Contestant / Team *</label>
-              <select id="scoreContestantSelect" required onchange="loadExistingJudgeScore()"
-                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm bg-white">
-                <option value="">-- Add contestants in Tab 5 first --</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
-            <div class="flex items-center justify-between">
-              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Scoring Criteria</span>
-              <span id="maxPossibleLabel" class="text-xs font-semibold text-red-700">Max: 100 pts</span>
-            </div>
-            <div id="criteriaInputsContainer" class="space-y-3"></div>
-          </div>
-
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">Judge Remarks (Optional)</label>
-            <input type="text" id="judgeRemarksInput" placeholder="e.g., Great energy and choreography!"
-              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
-          </div>
-
-          <div class="pt-2 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100">
-            <div>
-              <span class="text-xs text-slate-500 block">Calculated Total</span>
-              <span id="liveCalculatedTotal" class="text-2xl font-extrabold text-red-700">0 / 100</span>
-            </div>
-            <button type="submit" class="px-6 py-3 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold text-sm shadow-sm flex items-center gap-2 transition">
-              <i data-lucide="send" class="w-4 h-4"></i>
-              <span>Submit Official Score</span>
-            </button>
-          </div>
-        </form>
-      </div>
-
-      <div class="lg:col-span-5 space-y-6">
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-          <div class="flex items-center justify-between mb-4">
-            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
-              <i data-lucide="history" class="w-4 h-4 text-red-700"></i>
-              <span>Recent Score Entries</span>
-            </h3>
-            <span id="totalBallotsBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800">0 Ballots</span>
-          </div>
-          <div id="recentBallotsList" class="space-y-2.5 text-sm text-slate-500 max-h-[430px] overflow-y-auto">
-            No scores submitted yet.
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ========================================================= -->
-    <!-- TAB 5: LIVE LEADERBOARD & SCORING SETUP                   -->
-    <!-- ========================================================= -->
-    <section id="view-leaderboard" class="hidden space-y-6">
-      <div class="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200 shadow-sm">
-        <div class="flex flex-wrap items-center gap-2">
-          <select id="leaderboardCategoryFilter" onchange="renderLeaderboard()" class="px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white font-medium">
-            <option value="all">All Categories / Divisions</option>
-          </select>
-          <select id="rankingModeSelect" onchange="renderLeaderboard()" class="px-3.5 py-2 rounded-xl border border-slate-300 text-sm bg-white font-medium">
-            <option value="average">Rank by Average Score (Multi-Judge)</option>
-            <option value="total">Rank by Cumulative Total Points</option>
-          </select>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <button onclick="exportScoresExcel()" class="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
-            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
-            <span>Export Scores (.xlsx)</span>
-          </button>
-          <button id="deleteAllScoresBtn" onclick="deleteAllScoringRecords()" class="px-3.5 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-semibold flex items-center gap-1.5">
-            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-            <span>Delete All Scores</span>
-          </button>
-        </div>
-      </div>
-
-      <!-- Top 3 Podium Cards -->
-      <div id="podiumGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4"></div>
-
-      <!-- Full Standings Table -->
-      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
-        <table class="w-full text-left border-collapse">
-          <thead>
-            <tr class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase text-slate-500 font-bold">
-              <th class="py-3.5 px-4 w-16">Rank</th>
-              <th class="py-3.5 px-4">Contestant / Team</th>
-              <th class="py-3.5 px-4">Category</th>
-              <th class="py-3.5 px-4 text-center">Judges Scored</th>
-              <th class="py-3.5 px-4 text-right">Total Points</th>
-              <th class="py-3.5 px-4 text-right">Average Score</th>
-            </tr>
-          </thead>
-          <tbody id="leaderboardTableBody" class="divide-y divide-slate-100 text-sm">
-            <tr>
-              <td colspan="6" class="py-8 text-center text-slate-400">No contestants registered yet.</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Contestant Registration & Criteria Setup -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 pt-2">
-        <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-          <div class="border-b border-slate-100 pb-3">
-            <h3 class="text-base font-bold text-slate-900">Add Contestant / Team</h3>
-            <p class="text-xs text-slate-500">Syncs automatically across all judges' devices.</p>
-          </div>
-          <form id="addContestantForm" class="space-y-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Contestant or Team Name *</label>
-              <input type="text" id="newContestantName" required placeholder="e.g., Team Alpha / Jane Doe"
-                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-red-600" />
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-1">Category / Division</label>
-                <input type="text" id="newContestantCategory" placeholder="e.g., Dance / Singing / Costume"
-                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-red-600" />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-700 mb-1">Entry / Order No.</label>
-                <input type="text" id="newContestantNumber" placeholder="e.g., #01"
-                  class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm outline-none focus:ring-2 focus:ring-red-600" />
-              </div>
-            </div>
-            <button type="submit" class="px-5 py-2.5 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-semibold flex items-center gap-1.5">
-              <i data-lucide="plus-circle" class="w-4 h-4"></i>
-              <span>Add Contestant</span>
-            </button>
-          </form>
-        </div>
-
-        <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 space-y-4">
-          <div class="border-b border-slate-100 pb-3">
-            <h3 class="text-base font-bold text-slate-900">Scoring Criteria Setup</h3>
-            <p class="text-xs text-slate-500">Format: <code>Name:MaxPoints</code> separated by commas.</p>
-          </div>
-          <div class="space-y-3">
-            <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Criteria Weights</label>
-              <input type="text" id="configCriteriaInput" value="Creativity & Originality:30, Execution & Skill:40, Stage Presence & Impact:30"
-                class="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-mono outline-none" />
-            </div>
-            <button type="button" onclick="saveEventConfig()" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5">
-              <i data-lucide="save" class="w-4 h-4"></i>
-              <span>Save & Sync Criteria</span>
-            </button>
-          </div>
-
-          <div class="pt-2 border-t border-slate-100">
-            <h4 class="text-xs font-bold uppercase text-slate-500 mb-2">Contestant Roster</h4>
-            <div class="max-h-44 overflow-y-auto">
-              <table class="w-full text-left border-collapse text-xs">
-                <tbody id="adminContestantTable" class="divide-y divide-slate-100"></tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-  </main>
-
-  <!-- EmailJS Official Event Pass Template Modal -->
-  <div id="emailModal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-4">
-      <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-900">EmailJS Official Pass Template (template_n9u8619)</h3>
-        <button onclick="document.getElementById('emailModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
-      </div>
-      <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 space-y-1">
-        <p class="font-bold">Setup in EmailJS (Works on Free Plan):</p>
-        <p>1. Set <strong>Subject</strong> to: <code>Christmas Party 2026 Official Pass: {{to_name}}</code></p>
-        <p>2. Set <strong>To Email</strong> (right sidebar) to: <code>{{to_email}}</code></p>
-        <p>3. Click <strong>Edit Content</strong> &rarr; <strong>&lt;&gt; (Source code)</strong> and paste this HTML:</p>
-      </div>
-      <textarea id="emailTemplateCode" readonly rows="9" class="w-full font-mono text-xs p-3 bg-slate-900 text-emerald-300 rounded-xl"><div style="font-family: Arial, Helvetica, sans-serif; max-width: 380px; margin: 20px auto; background-color: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 18px; overflow: hidden;">
-  <div style="background: linear-gradient(90deg, #14532d 0%, #4a2518 45%, #8b1515 100%); background-color: #8b1515; color: #ffffff; padding: 22px 20px; text-align: center;">
-    <p style="margin: 0; font-size: 11px; font-weight: bold; letter-spacing: 2px; color: #fbbf24; text-transform: uppercase;">OFFICIAL EVENT PASS</p>
-    <h2 style="margin: 6px 0 0; font-size: 22px; font-weight: 800; color: #ffffff;">Christmas Party 2026</h2>
-  </div>
-  <div style="padding: 26px 20px; text-align: center; background-color: #ffffff;">
-    <div style="display: inline-block; padding: 14px; border: 2px dashed #fda4af; border-radius: 18px; background-color: #ffffff;">
-      <img src="https://quickchart.io/qr?text={{guest_id}}&size=220&dark=7f1d1d&light=ffffff&margin=2" alt="Official Event Pass QR Code" width="190" height="190" style="display: block; border: 0;" />
-    </div>
-    <div style="margin-top: 20px;">
-      <span style="display: inline-block; padding: 5px 14px; border-radius: 999px; background-color: #d1fae5; color: #065f46; font-size: 11px; font-weight: 800; text-transform: uppercase;">{{guest_type}}</span>
-    </div>
-    <h3 style="margin: 10px 0 4px; font-size: 22px; font-weight: 800; color: #0f172a;">{{to_name}}</h3>
-    <p style="margin: 0 0 10px; font-size: 13px; color: #64748b;">{{to_email}}</p>
-    <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 15px; font-weight: bold; color: #b91c1c;">{{guest_id}}</p>
-    <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #f1f5f9;">
-      <a href="https://quickchart.io/qr?text={{guest_id}}&size=300&dark=7f1d1d&light=ffffff&margin=2" target="_blank" style="display: inline-block; padding: 8px 16px; background-color: #991b1b; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: bold;">Open / Save QR Image</a>
-    </div>
-  </div>
-</div></textarea>
-      <div class="flex justify-end gap-2">
-        <button onclick="copyTemplateHtml()" class="px-4 py-2 rounded-xl bg-red-700 text-white text-xs font-semibold">Copy HTML Code</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Toast Container -->
-  <div id="toastBox" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
-
-  <!-- Unified Cloud Sync: QR Attendance + Live Contest Scoring -->
+<!-- Unified Cloud Sync: QR Attendance + Live Contest Scoring -->
   <script>
     var FIREBASE_PROJECT_ID = "qrattendance-39ba7";
     var FIREBASE_API_KEY = "AIzaSyA_mpRuJB1Dl1LE_8dVuuRnpvp3uaTiU0Y";
@@ -631,39 +69,56 @@
       var alertBanner = document.getElementById("rulesAlertBanner");
       var alertText = document.getElementById("rulesAlertText");
 
-      text.textContent = label;
-      alertBanner.classList.add("hidden");
+      if (text) text.textContent = label;
+      if (alertBanner) alertBanner.classList.add("hidden");
 
       if (status === "live") {
-        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/25 border border-emerald-300/50 text-emerald-100";
-        dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
+        if (badge) badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/25 border border-emerald-300/50 text-emerald-100";
+        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
       } else if (status === "blocked") {
-        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/30 border border-red-200 text-white";
-        dot.className = "w-2.5 h-2.5 rounded-full bg-red-300 animate-ping";
-        if (detailMsg) alertText.innerHTML = detailMsg;
-        alertBanner.classList.remove("hidden");
+        if (badge) badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/30 border border-red-200 text-white";
+        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-red-300 animate-ping";
+        if (detailMsg && alertText) alertText.innerHTML = detailMsg;
+        if (alertBanner) alertBanner.classList.remove("hidden");
       } else {
-        badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/20 border border-amber-300/40 text-amber-100";
-        dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+        if (badge) badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/20 border border-amber-300/40 text-amber-100";
+        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
       }
     }
 
     function persistAllAndRender() {
-      guests.sort(function (a, b) { return (b.registeredAt || "").localeCompare(a.registeredAt || ""); });
-      try { localStorage.setItem(LOCAL_GUESTS_KEY, JSON.stringify(guests)); } catch (e) {}
-      try { localStorage.setItem(LOCAL_SCORING_KEY, JSON.stringify(scoringState)); } catch (e) {}
+      try {
+        guests.sort(function (a, b) { return (b.registeredAt || "").localeCompare(a.registeredAt || ""); });
+        localStorage.setItem(LOCAL_GUESTS_KEY, JSON.stringify(guests));
+        localStorage.setItem(LOCAL_SCORING_KEY, JSON.stringify(scoringState));
+      } catch (e) {}
 
-      document.getElementById("navCountBadge").textContent = guests.length;
-      document.getElementById("navContestantBadge").textContent = scoringState.contestants.length;
-      document.getElementById("configCriteriaInput").value = scoringState.criteria.map(function (c) { return c.name + ":" + c.max; }).join(", ");
+      try { document.getElementById("navCountBadge").textContent = guests.length; } catch (e) {}
+      try { document.getElementById("navContestantBadge").textContent = scoringState.contestants.length; } catch (e) {}
+      try { document.getElementById("configCriteriaInput").value = scoringState.criteria.map(function (c) { return c.name + ":" + c.max; }).join(", "); } catch (e) {}
 
-      renderDashboard();
-      renderRecentScans();
-      renderCriteriaInputs();
-      renderContestantDropdowns();
-      renderRecentBallots();
-      renderLeaderboard();
-      renderAdminTable();
+      try { renderDashboard(); } catch (e) {}
+      try { renderRecentScans(); } catch (e) {}
+      try { renderCriteriaInputs(); } catch (e) {}
+      try { renderContestantDropdowns(); } catch (e) {}
+      try { renderRecentBallots(); } catch (e) {}
+      try { renderLeaderboard(); } catch (e) {}
+      try { renderAdminTable(); } catch (e) {}
+    }
+
+    function fetchWithTimeout(url, options, ms) {
+      return new Promise(function (resolve, reject) {
+        var timer = setTimeout(function () {
+          reject(new Error("Timeout (" + (ms / 1000) + "s)"));
+        }, ms || 8000);
+        fetch(url, options).then(function (res) {
+          clearTimeout(timer);
+          resolve(res);
+        }).catch(function (err) {
+          clearTimeout(timer);
+          reject(err);
+        });
+      });
     }
 
     async function syncFromCloud(showNotification) {
@@ -671,21 +126,17 @@
       isSyncingNow = true;
 
       try {
-        var results = await Promise.all([
-          fetch(GUESTS_URL + "&pageSize=500", { cache: "no-store" }),
-          fetch(SCORING_URL + "&pageSize=500", { cache: "no-store" })
-        ]);
-
-        var guestRes = results[0];
-        var scoreRes = results[1];
-
-        if (guestRes.status === 403 || scoreRes.status === 403) {
+        var guestRes = await fetchWithTimeout(GUESTS_URL + "&pageSize=500", { cache: "no-store" }, 8000);
+        if (guestRes.status === 403) {
           setSyncBadge("blocked", "Error 403: Blocked", "<strong>Firestore Rules Blocked (403):</strong> Open Firebase Console &rarr; Firestore &rarr; Rules and publish <code>allow read, write: if true;</code>");
           return;
         }
-        if (!guestRes.ok || !scoreRes.ok) throw new Error("HTTP " + guestRes.status);
+        if (guestRes.status === 404) {
+          setSyncBadge("blocked", "Error 404: No DB", "<strong>Firestore Database Not Created (404):</strong> Open Firebase Console &rarr; Firestore and click <strong>Create database</strong>.");
+          return;
+        }
+        if (!guestRes.ok) throw new Error("Guests HTTP " + guestRes.status);
 
-        // 1. Parse Guests
         var guestData = await guestRes.json();
         var remoteGuests = (guestData.documents || []).map(fromFirestoreDoc);
         var remoteGuestIds = {};
@@ -698,41 +149,45 @@
         }
         guests = remoteGuests;
 
-        // 2. Parse Scoring
-        var scoreData = await scoreRes.json();
-        var scoreDocs = (scoreData.documents || []).map(fromFirestoreDoc);
-        var remoteContestants = [];
-        var remoteScores = [];
+        // Fetch scoring collection independently so even if empty it succeeds
+        var scoreRes = await fetchWithTimeout(SCORING_URL + "&pageSize=500", { cache: "no-store" }, 8000);
+        if (scoreRes.ok) {
+          var scoreData = await scoreRes.json();
+          var scoreDocs = (scoreData.documents || []).map(fromFirestoreDoc);
+          var remoteContestants = [];
+          var remoteScores = [];
 
-        scoreDocs.forEach(function (d) {
-          if (d.recordType === "config" && d.criteriaJson) {
-            try { scoringState.criteria = JSON.parse(d.criteriaJson); } catch (e) {}
-          } else if (d.recordType === "contestant") {
-            remoteContestants.push(d);
-          } else if (d.recordType === "score") {
-            try { d.breakdown = JSON.parse(d.breakdownJson || "{}"); } catch (e) { d.breakdown = {}; }
-            remoteScores.push(d);
-          }
-        });
+          scoreDocs.forEach(function (d) {
+            if (d.recordType === "config" && d.criteriaJson) {
+              try { scoringState.criteria = JSON.parse(d.criteriaJson); } catch (e) {}
+            } else if (d.recordType === "contestant") {
+              remoteContestants.push(d);
+            } else if (d.recordType === "score") {
+              try { d.breakdown = JSON.parse(d.breakdownJson || "{}"); } catch (e) { d.breakdown = {}; }
+              remoteScores.push(d);
+            }
+          });
 
-        remoteContestants.sort(function (a, b) { return (a.entryNo || "").localeCompare(b.entryNo || ""); });
-        remoteScores.sort(function (a, b) { return (b.submittedAt || "").localeCompare(a.submittedAt || ""); });
+          remoteContestants.sort(function (a, b) { return (a.entryNo || "").localeCompare(b.entryNo || ""); });
+          remoteScores.sort(function (a, b) { return (b.submittedAt || "").localeCompare(a.submittedAt || ""); });
 
-        scoringState.contestants = remoteContestants;
-        scoringState.scores = remoteScores;
+          scoringState.contestants = remoteContestants;
+          scoringState.scores = remoteScores;
+        }
 
         setSyncBadge("live", "Synced (" + guests.length + " Guests • " + scoringState.contestants.length + " Teams)");
         persistAllAndRender();
         if (showNotification) showToast("Synced guests & scoring from cloud!", "success");
       } catch (err) {
-        setSyncBadge("connecting", "Offline (" + (err.message || "Network") + ")");
-        if (showNotification) showToast("Network issue: " + (err.message || "Check connection"), "warning");
+        setSyncBadge("connecting", "Offline: " + (err.message || "Network"));
+        if (showNotification) showToast("Sync error: " + (err.message || "Check connection"), "warning");
       } finally {
         isSyncingNow = false;
       }
     }
 
     function forceCloudSync() {
+      isSyncingNow = false;
       setSyncBadge("connecting", "Syncing...");
       syncFromCloud(true);
     }
@@ -810,61 +265,4 @@
       ctx.closePath();
     }
 
-    function buildEventPassPngDataUrl(guest) {
-      return new Promise(function (resolve) {
-        var stage = document.getElementById("hiddenQrStage");
-        stage.innerHTML = "";
-        new QRCode(stage, {
-          text: guest.id,
-          width: 220,
-          height: 220,
-          colorDark: "#7f1d1d",
-          colorLight: "#ffffff",
-          correctLevel: QRCode.CorrectLevel.H
-        });
-
-        setTimeout(function () {
-          var rawCanvas = stage.querySelector("canvas");
-          var card = document.createElement("canvas");
-          card.width = 420;
-          card.height = 510;
-          var ctx = card.getContext("2d");
-
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, card.width, card.height);
-
-          ctx.save();
-          roundRectPath(ctx, 4, 4, card.width - 8, card.height - 8, 18);
-          ctx.clip();
-
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(4, 4, card.width - 8, card.height - 8);
-
-          var grad = ctx.createLinearGradient(0, 0, card.width, 0);
-          grad.addColorStop(0, "#14532d");
-          grad.addColorStop(0.45, "#4a2518");
-          grad.addColorStop(1, "#8b1515");
-          ctx.fillStyle = grad;
-          ctx.fillRect(0, 0, card.width, 96);
-
-          ctx.fillStyle = "#fbbf24";
-          ctx.font = "bold 11px Arial, sans-serif";
-          ctx.textAlign = "center";
-          ctx.fillText("O F F I C I A L   E V E N T   P A S S", card.width / 2, 38);
-
-          ctx.fillStyle = "#ffffff";
-          ctx.font = "bold 22px Arial, sans-serif";
-          ctx.fillText("Christmas Party 2026", card.width / 2, 68);
-
-          var boxX = 95, boxY = 122, boxSize = 230;
-          ctx.save();
-          roundRectPath(ctx, boxX, boxY, boxSize, boxSize, 18);
-          ctx.fillStyle = "#ffffff";
-          ctx.fill();
-          ctx.strokeStyle = "#fda4af";
-          ctx.lineWidth = 1.5;
-          ctx.setLineDash([5, 4]);
-          ctx.stroke();
-          ctx.restore();
-
-          if (rawCanvas) ctx.drawImage(rawCanvas, boxX + 15, boxY + 15, 2
+    function buildEventPassPngDataUrl(guest)
