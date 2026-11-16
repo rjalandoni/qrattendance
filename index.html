@@ -1,268 +1,402 @@
-<!-- Unified Cloud Sync: QR Attendance + Live Contest Scoring -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Christmas Party 2026 — QR Attendance & Live Scoring</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
   <script>
-    var FIREBASE_PROJECT_ID = "qrattendance-39ba7";
-    var FIREBASE_API_KEY = "AIzaSyA_mpRuJB1Dl1LE_8dVuuRnpvp3uaTiU0Y";
-    var GUESTS_COLLECTION = "christmas_guests";
-    var SCORING_COLLECTION = "event_scoring_2026";
-
-    var GUESTS_URL = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + GUESTS_COLLECTION + "?key=" + FIREBASE_API_KEY;
-    var SCORING_URL = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + SCORING_COLLECTION + "?key=" + FIREBASE_API_KEY;
-
-    var LOCAL_GUESTS_KEY = "xmas_2026_guests_cache";
-    var LOCAL_SCORING_KEY = "event_scoring_2026_cache";
-
-    var guests = [];
-    try { guests = JSON.parse(localStorage.getItem(LOCAL_GUESTS_KEY) || "[]"); } catch (e) { guests = []; }
-
-    var scoringState = {
-      criteria: [
-        { name: "Creativity & Originality", max: 30 },
-        { name: "Execution & Skill", max: 40 },
-        { name: "Stage Presence & Impact", max: 30 }
-      ],
-      contestants: [],
-      scores: []
+    window.EMAILJS_CONFIG = {
+      publicKey: "kqIzEf-5-Noa9NWNR",
+      serviceId: "service_h3hfprm",
+      templateId: "template_n9u8619"
     };
-    try {
-      var cachedScoring = JSON.parse(localStorage.getItem(LOCAL_SCORING_KEY) || "null");
-      if (cachedScoring && cachedScoring.contestants) scoringState = cachedScoring;
-    } catch (e) {}
-
-    var currentPassGuest = null;
-    var currentPassDataUrl = null;
-    var html5QrScanner = null;
-    var isSyncingNow = false;
-
-    function toFirestoreFields(obj) {
-      var fields = {};
-      for (var k in obj) {
-        var v = obj[k];
-        if (typeof v === "boolean") fields[k] = { booleanValue: v };
-        else if (typeof v === "number") fields[k] = { doubleValue: v };
-        else fields[k] = { stringValue: v == null ? "" : String(v) };
+    window.addEventListener("DOMContentLoaded", function () {
+      if (window.emailjs && window.EMAILJS_CONFIG.publicKey) {
+        emailjs.init({ publicKey: window.EMAILJS_CONFIG.publicKey });
       }
-      return { fields: fields };
-    }
-
-    function fromFirestoreDoc(docObj) {
-      var f = docObj.fields || {};
-      var out = {};
-      for (var k in f) {
-        var val = f[k];
-        if ("stringValue" in val) out[k] = val.stringValue;
-        else if ("booleanValue" in val) out[k] = val.booleanValue;
-        else if ("integerValue" in val) out[k] = Number(val.integerValue);
-        else if ("doubleValue" in val) out[k] = Number(val.doubleValue);
-      }
-      if (!out.id && !out.docId && docObj.name) {
-        var tail = docObj.name.split("/").pop();
-        out.id = tail;
-        out.docId = tail;
-      }
-      return out;
-    }
-
-    function setSyncBadge(status, label, detailMsg) {
-      var badge = document.getElementById("syncBadge");
-      var dot = document.getElementById("syncDot");
-      var text = document.getElementById("syncText");
-      var alertBanner = document.getElementById("rulesAlertBanner");
-      var alertText = document.getElementById("rulesAlertText");
-
-      if (text) text.textContent = label;
-      if (alertBanner) alertBanner.classList.add("hidden");
-
-      if (status === "live") {
-        if (badge) badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/25 border border-emerald-300/50 text-emerald-100";
-        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-emerald-400";
-      } else if (status === "blocked") {
-        if (badge) badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-red-500/30 border border-red-200 text-white";
-        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-red-300 animate-ping";
-        if (detailMsg && alertText) alertText.innerHTML = detailMsg;
-        if (alertBanner) alertBanner.classList.remove("hidden");
-      } else {
-        if (badge) badge.className = "flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/20 border border-amber-300/40 text-amber-100";
-        if (dot) dot.className = "w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse";
+    });
+  </script>
+  <style>
+    @media print {
+      body * { visibility: hidden; }
+      #printablePass, #printablePass * { visibility: visible; }
+      #printablePass {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        width: 360px;
+        border: 2px solid #991b1b;
       }
     }
-
-    function persistAllAndRender() {
-      try {
-        guests.sort(function (a, b) { return (b.registeredAt || "").localeCompare(a.registeredAt || ""); });
-        localStorage.setItem(LOCAL_GUESTS_KEY, JSON.stringify(guests));
-        localStorage.setItem(LOCAL_SCORING_KEY, JSON.stringify(scoringState));
-      } catch (e) {}
-
-      try { document.getElementById("navCountBadge").textContent = guests.length; } catch (e) {}
-      try { document.getElementById("navContestantBadge").textContent = scoringState.contestants.length; } catch (e) {}
-      try { document.getElementById("configCriteriaInput").value = scoringState.criteria.map(function (c) { return c.name + ":" + c.max; }).join(", "); } catch (e) {}
-
-      try { renderDashboard(); } catch (e) {}
-      try { renderRecentScans(); } catch (e) {}
-      try { renderCriteriaInputs(); } catch (e) {}
-      try { renderContestantDropdowns(); } catch (e) {}
-      try { renderRecentBallots(); } catch (e) {}
-      try { renderLeaderboard(); } catch (e) {}
-      try { renderAdminTable(); } catch (e) {}
+    .festive-bg {
+      background: linear-gradient(90deg, #14532d 0%, #4a2518 45%, #8b1515 100%);
     }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
 
-    function fetchWithTimeout(url, options, ms) {
-      return new Promise(function (resolve, reject) {
-        var timer = setTimeout(function () {
-          reject(new Error("Timeout (" + (ms / 1000) + "s)"));
-        }, ms || 8000);
-        fetch(url, options).then(function (res) {
-          clearTimeout(timer);
-          resolve(res);
-        }).catch(function (err) {
-          clearTimeout(timer);
-          reject(err);
-        });
-      });
-    }
+  <!-- Header -->
+  <header class="festive-bg text-white shadow-lg sticky top-0 z-30">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-wrap items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="bg-amber-400 text-red-950 p-2.5 rounded-xl shadow-md">
+          <i data-lucide="sparkles" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Christmas Party 2026</h1>
+          <p class="text-xs sm:text-sm text-amber-200/90">QR Registration, Official Pass Email, Check-In & Live Contest Scoring</p>
+        </div>
+      </div>
 
-    async function syncFromCloud(showNotification) {
-      if (isSyncingNow) return;
-      isSyncingNow = true;
+      <div class="flex items-center gap-2.5">
+        <div id="syncBadge" class="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/20 border border-amber-300/40 text-amber-100">
+          <span id="syncDot" class="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+          <span id="syncText">Connecting...</span>
+        </div>
+        <button onclick="forceCloudSync()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/15 hover:bg-white/25 text-xs font-semibold transition border border-white/20">
+          <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+          <span>Sync Now</span>
+        </button>
+      </div>
+    </div>
 
-      try {
-        var guestRes = await fetchWithTimeout(GUESTS_URL + "&pageSize=500", { cache: "no-store" }, 8000);
-        if (guestRes.status === 403) {
-          setSyncBadge("blocked", "Error 403: Blocked", "<strong>Firestore Rules Blocked (403):</strong> Open Firebase Console &rarr; Firestore &rarr; Rules and publish <code>allow read, write: if true;</code>");
-          return;
-        }
-        if (guestRes.status === 404) {
-          setSyncBadge("blocked", "Error 404: No DB", "<strong>Firestore Database Not Created (404):</strong> Open Firebase Console &rarr; Firestore and click <strong>Create database</strong>.");
-          return;
-        }
-        if (!guestRes.ok) throw new Error("Guests HTTP " + guestRes.status);
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex gap-1.5 border-t border-white/15 pt-2 overflow-x-auto">
+      <button onclick="switchTab('register')" id="tab-register" class="tab-btn px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg bg-slate-50 text-red-900 flex items-center gap-1.5 whitespace-nowrap">
+        <i data-lucide="user-plus" class="w-4 h-4"></i>
+        <span>1. Register & QR</span>
+      </button>
+      <button onclick="switchTab('scanner')" id="tab-scanner" class="tab-btn px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-1.5 whitespace-nowrap">
+        <i data-lucide="scan-line" class="w-4 h-4"></i>
+        <span>2. QR Scanner</span>
+      </button>
+      <button onclick="switchTab('dashboard')" id="tab-dashboard" class="tab-btn px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-1.5 whitespace-nowrap">
+        <i data-lucide="users" class="w-4 h-4"></i>
+        <span>3. Guest List</span>
+        <span id="navCountBadge" class="ml-1 px-2 py-0.5 text-xs rounded-full bg-amber-400 text-red-950 font-bold">0</span>
+      </button>
+      <button onclick="switchTab('judge')" id="tab-judge" class="tab-btn px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-1.5 whitespace-nowrap">
+        <i data-lucide="clipboard-check" class="w-4 h-4"></i>
+        <span>4. Judge Scoring</span>
+      </button>
+      <button onclick="switchTab('leaderboard')" id="tab-leaderboard" class="tab-btn px-3.5 py-2.5 text-xs sm:text-sm font-semibold rounded-t-lg text-white/85 hover:bg-white/10 flex items-center gap-1.5 whitespace-nowrap">
+        <i data-lucide="trophy" class="w-4 h-4"></i>
+        <span>5. Leaderboard & Setup</span>
+        <span id="navContestantBadge" class="ml-1 px-2 py-0.5 text-xs rounded-full bg-emerald-400 text-emerald-950 font-bold">0</span>
+      </button>
+    </div>
+  </header>
 
-        var guestData = await guestRes.json();
-        var remoteGuests = (guestData.documents || []).map(fromFirestoreDoc);
-        var remoteGuestIds = {};
-        remoteGuests.forEach(function (g) { remoteGuestIds[g.id] = true; });
-        for (var i = 0; i < guests.length; i++) {
-          if (guests[i].id && !remoteGuestIds[guests[i].id]) {
-            await pushGuestToCloud(guests[i]);
-            remoteGuests.push(guests[i]);
-          }
-        }
-        guests = remoteGuests;
+  <!-- Firestore Diagnostic Alert Banner -->
+  <div id="rulesAlertBanner" class="hidden bg-red-600 text-white px-4 py-3 text-sm">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <span id="rulesAlertText"><strong>Firestore Connection Blocked:</strong> Check Firestore Rules in Firebase Console.</span>
+      <a href="https://console.firebase.google.com/project/qrattendance-39ba7/firestore/rules" target="_blank" class="underline font-bold">Open Firestore Rules &rarr;</a>
+    </div>
+  </div>
 
-        // Fetch scoring collection independently so even if empty it succeeds
-        var scoreRes = await fetchWithTimeout(SCORING_URL + "&pageSize=500", { cache: "no-store" }, 8000);
-        if (scoreRes.ok) {
-          var scoreData = await scoreRes.json();
-          var scoreDocs = (scoreData.documents || []).map(fromFirestoreDoc);
-          var remoteContestants = [];
-          var remoteScores = [];
+  <div id="hiddenQrStage" class="hidden"></div>
 
-          scoreDocs.forEach(function (d) {
-            if (d.recordType === "config" && d.criteriaJson) {
-              try { scoringState.criteria = JSON.parse(d.criteriaJson); } catch (e) {}
-            } else if (d.recordType === "contestant") {
-              remoteContestants.push(d);
-            } else if (d.recordType === "score") {
-              try { d.breakdown = JSON.parse(d.breakdownJson || "{}"); } catch (e) { d.breakdown = {}; }
-              remoteScores.push(d);
-            }
-          });
+  <!-- Main Content -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-          remoteContestants.sort(function (a, b) { return (a.entryNo || "").localeCompare(b.entryNo || ""); });
-          remoteScores.sort(function (a, b) { return (b.submittedAt || "").localeCompare(a.submittedAt || ""); });
+    <!-- TAB 1: REGISTRATION -->
+    <section id="view-register" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">New Guest Registration</h2>
+            <p class="text-xs text-slate-500">Generates the Official Event Pass, syncs across devices, and emails the pass card.</p>
+          </div>
+          <button type="button" onclick="openEmailTemplateModal()" class="text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 flex items-center gap-1.5">
+            <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+            <span>EmailJS HTML Template</span>
+          </button>
+        </div>
 
-          scoringState.contestants = remoteContestants;
-          scoringState.scores = remoteScores;
-        }
+        <form id="registerForm" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
+              <input type="text" id="guestName" required placeholder="e.g., Rob Ben"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address (for Official Pass) *</label>
+              <input type="email" id="guestEmail" required placeholder="guest@example.com"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
+            </div>
+          </div>
 
-        setSyncBadge("live", "Synced (" + guests.length + " Guests • " + scoringState.contestants.length + " Teams)");
-        persistAllAndRender();
-        if (showNotification) showToast("Synced guests & scoring from cloud!", "success");
-      } catch (err) {
-        setSyncBadge("connecting", "Offline: " + (err.message || "Network"));
-        if (showNotification) showToast("Sync error: " + (err.message || "Check connection"), "warning");
-      } finally {
-        isSyncingNow = false;
-      }
-    }
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Guest Category</label>
+              <select id="guestType" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm bg-white">
+                <option value="Employee / Staff">Employee / Staff</option>
+                <option value="Regular Guest">Regular Guest</option>
+                <option value="VIP">VIP</option>
+                <option value="Plus One (+1)">Plus One (+1)</option>
+                <option value="Performer / Speaker">Performer / Speaker</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Department / Table No. (Optional)</label>
+              <input type="text" id="guestTable" placeholder="e.g., Table 4 / Marketing"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
+            </div>
+          </div>
 
-    function forceCloudSync() {
-      isSyncingNow = false;
-      setSyncBadge("connecting", "Syncing...");
-      syncFromCloud(true);
-    }
+          <div class="flex items-center gap-2 pt-1">
+            <input type="checkbox" id="autoSendEmail" checked class="w-4 h-4 text-red-700 rounded border-slate-300" />
+            <label for="autoSendEmail" class="text-sm text-slate-700 font-medium">
+              Send Official Event Pass email via EmailJS automatically
+            </label>
+          </div>
 
-    // =========================================================
-    // GUEST ATTENDANCE CLOUD & UI FUNCTIONS
-    // =========================================================
-    async function pushGuestToCloud(guest) {
-      var idx = guests.findIndex(function (g) { return g.id === guest.id; });
-      if (idx >= 0) guests[idx] = guest;
-      else guests.unshift(guest);
-      persistAllAndRender();
+          <div class="pt-2">
+            <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold text-sm shadow-sm flex items-center justify-center gap-2 transition">
+              <i data-lucide="qr-code" class="w-4 h-4"></i>
+              <span>Generate Official Pass & Email</span>
+            </button>
+          </div>
+        </form>
+      </div>
 
-      var docUrl = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + GUESTS_COLLECTION + "/" + encodeURIComponent(guest.id) + "?key=" + FIREBASE_API_KEY;
-      try {
-        var res = await fetch(docUrl, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(toFirestoreFields(guest))
-        });
-        if (res.status === 403) setSyncBadge("blocked", "Error 403: Blocked");
-      } catch (err) {}
-    }
+      <!-- Official Event Pass Preview -->
+      <div class="lg:col-span-5">
+        <div id="printablePass" class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden max-w-[380px] mx-auto">
+          <div class="festive-bg text-white px-6 py-5 text-center">
+            <p class="text-[11px] uppercase tracking-widest text-amber-400 font-bold">OFFICIAL EVENT PASS</p>
+            <h3 class="text-xl font-extrabold mt-1">Christmas Party 2026</h3>
+          </div>
+          <div class="p-6 flex flex-col items-center text-center">
+            <div id="qrCanvasContainer" class="p-3.5 bg-white border-2 border-dashed border-rose-300 rounded-2xl min-h-[212px] min-w-[212px] flex items-center justify-center">
+              <p class="text-xs text-slate-400 max-w-[170px]">Register a guest to generate their Official Event Pass</p>
+            </div>
+            <div class="mt-5 space-y-1.5">
+              <span id="passBadgeType" class="inline-block px-3.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 tracking-wide">EMPLOYEE / STAFF</span>
+              <h4 id="passGuestName" class="text-2xl font-extrabold text-slate-900 pt-0.5">Guest Name</h4>
+              <p id="passGuestEmail" class="text-xs text-slate-500">guest@example.com</p>
+              <p id="passGuestId" class="font-mono text-sm font-bold text-red-700 pt-1">XMAS-2026-XXXX</p>
+            </div>
+            <div id="passActions" class="hidden mt-5 pt-4 border-t border-slate-100 w-full flex flex-wrap justify-center gap-2">
+              <button type="button" onclick="resendCurrentPassEmail()" class="px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                <span>Resend Email</span>
+              </button>
+              <button type="button" onclick="downloadCurrentQrPng()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Save Pass PNG</span>
+              </button>
+              <button type="button" onclick="window.print()" class="px-3.5 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5">
+                <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                <span>Print</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    async function deleteGuestFromCloud(guestId) {
-      guests = guests.filter(function (g) { return g.id !== guestId; });
-      persistAllAndRender();
-      var docUrl = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + GUESTS_COLLECTION + "/" + encodeURIComponent(guestId) + "?key=" + FIREBASE_API_KEY;
-      await fetch(docUrl, { method: "DELETE" }).catch(function () {});
-    }
+    <!-- TAB 2: STAFF QR SCANNER -->
+    <section id="view-scanner" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900">Camera QR Scanner</h2>
+            <p class="text-xs text-slate-500">Point camera at attendee's QR code to check them in.</p>
+          </div>
+          <div class="flex gap-2">
+            <button id="startCamBtn" onclick="startCameraScanner()" class="px-4 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
+              <i data-lucide="camera" class="w-4 h-4"></i>
+              <span>Start Camera</span>
+            </button>
+            <button id="stopCamBtn" onclick="stopCameraScanner()" class="hidden px-4 py-2 rounded-xl bg-slate-700 hover:bg-slate-800 text-white text-xs font-semibold flex items-center gap-1.5">
+              <i data-lucide="camera-off" class="w-4 h-4"></i>
+              <span>Stop</span>
+            </button>
+          </div>
+        </div>
 
-    async function deleteAllRecords() {
-      if (!guests.length) {
-        showToast("Guest list is already empty.", "warning");
-        return;
-      }
-      var count = guests.length;
-      if (!confirm("Are you sure you want to delete ALL " + count + " guest records? This cannot be undone.")) return;
-      if (!confirm("FINAL WARNING: This will permanently erase all " + count + " guests and check-in history across all devices. Proceed?")) return;
+        <div id="reader" class="w-full rounded-xl overflow-hidden bg-slate-900 min-h-[280px] flex items-center justify-center text-slate-400 text-sm">
+          Click "Start Camera" to scan attendee passes
+        </div>
 
-      isSyncingNow = true;
-      var btn = document.getElementById("deleteAllBtn");
-      var originalHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<span>Deleting ' + count + '...</span>';
+        <div class="mt-5 pt-4 border-t border-slate-100">
+          <label class="block text-xs font-semibold text-slate-700 mb-1.5">Manual Guest ID Entry / USB Scanner</label>
+          <div class="flex gap-2">
+            <input type="text" id="manualCodeInput" placeholder="Enter XMAS-2026-XXXX..."
+              onkeydown="if(event.key==='Enter'){ handleCheckInScan(this.value); this.value=''; }"
+              class="flex-1 px-3.5 py-2 rounded-xl border border-slate-300 text-sm font-mono uppercase outline-none" />
+            <button onclick="var el=document.getElementById('manualCodeInput'); handleCheckInScan(el.value); el.value='';"
+              class="px-4 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-semibold">
+              Check In
+            </button>
+          </div>
+        </div>
+      </div>
 
-      var idsToDelete = guests.map(function (g) { return g.id; });
-      guests = [];
-      currentPassGuest = null;
-      currentPassDataUrl = null;
-      try { localStorage.removeItem(LOCAL_GUESTS_KEY); } catch (e) {}
-      persistAllAndRender();
+      <div class="lg:col-span-6 space-y-6">
+        <div id="scanResultBox" class="bg-white rounded-2xl shadow-sm border-2 border-slate-200 p-6 text-center">
+          <div class="w-14 h-14 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto mb-3">
+            <i data-lucide="qr-code" class="w-7 h-7"></i>
+          </div>
+          <h3 class="text-base font-bold text-slate-800">Ready for Check-In</h3>
+          <p class="text-xs text-slate-500 mt-1">Scan results update all connected devices in real time.</p>
+        </div>
 
-      try {
-        for (var i = 0; i < idsToDelete.length; i++) {
-          var docUrl = "https://firestore.googleapis.com/v1/projects/" + FIREBASE_PROJECT_ID + "/databases/(default)/documents/" + GUESTS_COLLECTION + "/" + encodeURIComponent(idsToDelete[i]) + "?key=" + FIREBASE_API_KEY;
-          await fetch(docUrl, { method: "DELETE" }).catch(function () {});
-        }
-        setSyncBadge("live", "Synced (0 Guests • " + scoringState.contestants.length + " Teams)");
-        showToast("Deleted all " + count + " guest records.", "success");
-      } finally {
-        isSyncingNow = false;
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-      }
-    }
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-5">
+          <h3 class="text-sm font-bold text-slate-800 mb-3 flex items-center gap-2">
+            <i data-lucide="clock" class="w-4 h-4 text-emerald-700"></i>
+            <span>Recent Live Check-Ins</span>
+          </h3>
+          <div id="recentScansList" class="space-y-2 text-sm text-slate-500">
+            No check-ins recorded yet.
+          </div>
+        </div>
+      </div>
+    </section>
 
-    function roundRectPath(ctx, x, y, w, h, r) {
-      ctx.beginPath();
-      ctx.moveTo(x + r, y);
-      ctx.arcTo(x + w, y, x + w, y + h, r);
-      ctx.arcTo(x + w, y + h, x, y + h, r);
-      ctx.arcTo(x, y + h, x, y, r);
-      ctx.arcTo(x, y, x + w, y, r);
-      ctx.closePath();
-    }
+    <!-- TAB 3: GUEST DIRECTORY & EXCEL -->
+    <section id="view-dashboard" class="hidden space-y-6">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-slate-500 uppercase">Total Registered</p>
+          <p id="statTotal" class="text-3xl font-extrabold text-slate-900 mt-1">0</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-emerald-700 uppercase">Checked In</p>
+          <p id="statCheckedIn" class="text-3xl font-extrabold text-emerald-700 mt-1">0</p>
+        </div>
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+          <p class="text-xs font-semibold text-amber-700 uppercase">Awaiting Arrival</p>
+          <p id="statPending" class="text-3xl font-extrabold text-amber-600 mt-1">0</p>
+        </div>
+      </div>
 
-    function buildEventPassPngDataUrl(guest)
+      <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+        <div class="flex flex-wrap items-center gap-2 flex-1 min-w-[240px]">
+          <input type="text" id="searchInput" oninput="renderDashboard()" placeholder="Search name, email, or QR ID..."
+            class="px-3.5 py-2 rounded-xl border border-slate-300 text-sm w-full sm:w-64 outline-none" />
+          <select id="filterStatus" onchange="renderDashboard()" class="px-3 py-2 rounded-xl border border-slate-300 text-sm bg-white">
+            <option value="all">All Guests</option>
+            <option value="checked_in">Checked In Only</option>
+            <option value="pending">Not Yet Arrived</option>
+          </select>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2">
+          <label class="cursor-pointer px-3.5 py-2 rounded-xl border border-slate-300 hover:bg-slate-50 text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+            <i data-lucide="upload" class="w-3.5 h-3.5 text-emerald-700"></i>
+            <span>Import Excel (.xlsx)</span>
+            <input type="file" id="excelUploadInput" accept=".xlsx,.xls,.csv" class="hidden" onchange="importExcelFile(event)" />
+          </label>
+          <button onclick="exportExcelFile()" class="px-3.5 py-2 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
+            <i data-lucide="file-spreadsheet" class="w-3.5 h-3.5"></i>
+            <span>Export Excel (.xlsx)</span>
+          </button>
+          <button id="deleteAllBtn" onclick="deleteAllRecords()" class="px-3.5 py-2 rounded-xl bg-red-700 hover:bg-red-800 text-white text-xs font-semibold flex items-center gap-1.5">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+            <span>Delete All Records</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 border-b border-slate-200 text-[11px] uppercase text-slate-500 font-bold">
+              <th class="py-3.5 px-4">Guest ID</th>
+              <th class="py-3.5 px-4">Attendee</th>
+              <th class="py-3.5 px-4">Category / Table</th>
+              <th class="py-3.5 px-4">Email Status</th>
+              <th class="py-3.5 px-4">Attendance</th>
+              <th class="py-3.5 px-4 text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody id="guestTableBody" class="divide-y divide-slate-100 text-sm">
+            <tr>
+              <td colspan="6" class="py-8 text-center text-slate-400">Loading guest list...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- TAB 4: JUDGE SCORING PAD -->
+    <section id="view-judge" class="hidden grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div class="lg:col-span-7 bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+        <div class="pb-4 mb-5 border-b border-slate-100">
+          <h2 class="text-lg font-bold text-slate-900">Submit Contest Judge Score</h2>
+          <p class="text-xs text-slate-500">Select your judge name and contestant/team, then enter scores per criterion.</p>
+        </div>
+
+        <form id="scoreForm" class="space-y-4">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Judge Name / Station *</label>
+              <input type="text" id="judgeNameInput" required placeholder="e.g., Judge 1 - Maria"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Select Contestant / Team *</label>
+              <select id="scoreContestantSelect" required onchange="loadExistingJudgeScore()"
+                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm bg-white">
+                <option value="">-- Add contestants in Tab 5 first --</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="bg-slate-50 rounded-xl p-4 border border-slate-200 space-y-3">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">Scoring Criteria</span>
+              <span id="maxPossibleLabel" class="text-xs font-semibold text-red-700">Max: 100 pts</span>
+            </div>
+            <div id="criteriaInputsContainer" class="space-y-3"></div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold text-slate-700 mb-1">Judge Remarks (Optional)</label>
+            <input type="text" id="judgeRemarksInput" placeholder="e.g., Great energy and choreography!"
+              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
+          </div>
+
+          <div class="pt-2 flex flex-wrap items-center justify-between gap-4 border-t border-slate-100">
+            <div>
+              <span class="text-xs text-slate-500 block">Calculated Total</span>
+              <span id="liveCalculatedTotal" class="text-2xl font-extrabold text-red-700">0 / 100</span>
+            </div>
+            <button type="submit" class="px-6 py-3 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold text-sm shadow-sm flex items-center gap-2 transition">
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>Submit Official Score</span>
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="lg:col-span-5 space-y-6">
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+          <div class="flex items-center justify-between mb-4">
+            <h3 class="text-base font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="history" class="w-4 h-4 text-red-700"></i>
+              <span>Recent Score Entries</span>
+            </h3>
+            <span id="totalBallotsBadge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-800">0 Ballots</span>
+          </div>
+          <div id="recentBallotsList" class="space-y-2.5 text-sm text-slate-500 max-h-[430px] overflow-y-auto">
+            No scores submitted yet.
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TAB 5: LIVE LEADERBOARD & SCORING SETUP -->
+    <section id="view-leaderboard" class="hidden space-y-6">
+      <div class="flex flex-wrap
