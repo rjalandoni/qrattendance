@@ -621,11 +621,18 @@
     }
 
     // Sends Official Event Pass card & deep-crimson QR via EmailJS Free Tier
-    async function sendQrEmail(guest) {
-      var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&color=7f1d1d&bgcolor=ffffff&data=" + encodeURIComponent(guest.id);
+  async function sendQrEmail(guest) {
+      var cleanEmail = (guest.email || "").trim();
+      if (!cleanEmail || cleanEmail.indexOf("@") === -1) {
+        showToast("Invalid or missing email address for " + guest.name, "warning");
+        return;
+      }
+
+      var qrUrl = "https://quickchart.io/qr?text=" + encodeURIComponent(guest.id) + "&size=220&dark=7f1d1d&light=ffffff&margin=2";
       var templateParams = {
         to_name: guest.name,
-        to_email: guest.email,
+        to_email: cleanEmail,
+        email: cleanEmail,
         guest_id: guest.id,
         guest_type: (guest.type || "Employee / Staff").toUpperCase(),
         table_info: guest.table || "Open Seating",
@@ -642,7 +649,7 @@
         );
         guest.emailSent = true;
         await pushGuestToCloud(guest);
-        showToast("Official Event Pass emailed to " + guest.email + "!", "success");
+        showToast("Official Event Pass emailed to " + cleanEmail + "!", "success");
       } catch (err) {
         showToast("Registered, but email failed: " + (err && err.text ? err.text : "Check EmailJS"), "warning");
       }
