@@ -36,7 +36,7 @@
       }
     }
     .festive-bg {
-      background: radial-gradient(circle at top right, #991b1b 0%, #7f1d1d 45%, #14532d 100%);
+      background: linear-gradient(90deg, #14532d 0%, #4a2518 45%, #8b1515 100%);
     }
   </style>
 </head>
@@ -51,7 +51,7 @@
         </div>
         <div>
           <h1 class="text-xl sm:text-2xl font-bold tracking-tight">Christmas Party 2026</h1>
-          <p class="text-xs sm:text-sm text-amber-200/90">Multi-Device QR Registration, Email Attachment & Check-In</p>
+          <p class="text-xs sm:text-sm text-amber-200/90">Multi-Device QR Registration, Official Pass Email & Check-In</p>
         </div>
       </div>
 
@@ -105,11 +105,11 @@
         <div class="flex flex-wrap items-center justify-between gap-2 pb-4 mb-5 border-b border-slate-100">
           <div>
             <h2 class="text-lg font-bold text-slate-900">New Guest Registration</h2>
-            <p class="text-xs text-slate-500">Generates a custom festive QR pass, syncs across devices, and sends it as an email attachment.</p>
+            <p class="text-xs text-slate-500">Generates the Official Event Pass, syncs across devices, and emails the pass card.</p>
           </div>
           <button type="button" onclick="openEmailTemplateModal()" class="text-xs font-semibold text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg border border-red-200 flex items-center gap-1.5">
-            <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
-            <span>EmailJS Attachment Setup</span>
+            <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+            <span>EmailJS HTML Template</span>
           </button>
         </div>
 
@@ -117,11 +117,11 @@
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">Full Name *</label>
-              <input type="text" id="guestName" required placeholder="e.g., Juan Dela Cruz"
+              <input type="text" id="guestName" required placeholder="e.g., Rob Ben"
                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address (for QR Attachment) *</label>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Email Address (for Official Pass) *</label>
               <input type="email" id="guestEmail" required placeholder="guest@example.com"
                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
             </div>
@@ -131,70 +131,61 @@
             <div>
               <label class="block text-xs font-semibold text-slate-700 mb-1">Guest Category</label>
               <select id="guestType" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm bg-white">
+                <option value="Employee / Staff">Employee / Staff</option>
                 <option value="Regular Guest">Regular Guest</option>
                 <option value="VIP">VIP</option>
-                <option value="Employee / Staff">Employee / Staff</option>
                 <option value="Plus One (+1)">Plus One (+1)</option>
                 <option value="Performer / Speaker">Performer / Speaker</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-700 mb-1">Department / Table No.</label>
+              <label class="block text-xs font-semibold text-slate-700 mb-1">Department / Table No. (Optional)</label>
               <input type="text" id="guestTable" placeholder="e.g., Table 4 / Marketing"
                 class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm" />
             </div>
           </div>
 
-          <div>
-            <label class="block text-xs font-semibold text-slate-700 mb-1">QR Pass Design Theme</label>
-            <select id="qrDesignTheme" class="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-red-600 outline-none text-sm bg-white">
-              <option value="classic-christmas">Classic Crimson & Gold Ornament</option>
-              <option value="emerald-pine">Emerald Evergreen & Holiday Star</option>
-              <option value="royal-gold">Midnight Navy & Golden Snowflake</option>
-            </select>
-          </div>
-
           <div class="flex items-center gap-2 pt-1">
             <input type="checkbox" id="autoSendEmail" checked class="w-4 h-4 text-red-700 rounded border-slate-300" />
             <label for="autoSendEmail" class="text-sm text-slate-700 font-medium">
-              Attach designed QR Pass PNG & send via EmailJS automatically
+              Send Official Event Pass email via EmailJS automatically
             </label>
           </div>
 
           <div class="pt-2">
             <button type="submit" class="w-full sm:w-auto px-6 py-3 rounded-xl bg-red-700 hover:bg-red-800 text-white font-semibold text-sm shadow-sm flex items-center justify-center gap-2 transition">
               <i data-lucide="qr-code" class="w-4 h-4"></i>
-              <span>Generate Styled Pass & Send</span>
+              <span>Generate Official Pass & Email</span>
             </button>
           </div>
         </form>
       </div>
 
-      <!-- Styled Digital Pass Preview -->
+      <!-- Official Event Pass Preview -->
       <div class="lg:col-span-5">
-        <div id="printablePass" class="bg-white rounded-2xl shadow-md border-2 border-red-800/20 overflow-hidden">
-          <div class="festive-bg text-white px-6 py-4 text-center">
-            <p class="text-[11px] uppercase tracking-widest text-amber-300 font-bold">Official Event Pass</p>
-            <h3 class="text-lg font-extrabold mt-0.5">Christmas Party 2026</h3>
+        <div id="printablePass" class="bg-white rounded-2xl shadow-md border border-slate-200 overflow-hidden max-w-[380px] mx-auto">
+          <div class="festive-bg text-white px-6 py-5 text-center">
+            <p class="text-[11px] uppercase tracking-widest text-amber-400 font-bold">OFFICIAL EVENT PASS</p>
+            <h3 class="text-xl font-extrabold mt-1">Christmas Party 2026</h3>
           </div>
           <div class="p-6 flex flex-col items-center text-center">
-            <div id="qrCanvasContainer" class="p-2 bg-white rounded-2xl shadow-inner min-h-[240px] min-w-[240px] flex items-center justify-center">
-              <p class="text-xs text-slate-400 max-w-[180px]">Register a guest to preview their custom designed QR pass</p>
+            <div id="qrCanvasContainer" class="p-3.5 bg-white border-2 border-dashed border-rose-300 rounded-2xl min-h-[212px] min-w-[212px] flex items-center justify-center">
+              <p class="text-xs text-slate-400 max-w-[170px]">Register a guest to generate their Official Event Pass</p>
             </div>
-            <div class="mt-4 space-y-1">
-              <span id="passBadgeType" class="inline-block px-3 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">GUEST PASS</span>
-              <h4 id="passGuestName" class="text-xl font-bold text-slate-900">Guest Name</h4>
+            <div class="mt-5 space-y-1.5">
+              <span id="passBadgeType" class="inline-block px-3.5 py-1 rounded-full text-xs font-extrabold bg-emerald-100 text-emerald-800 tracking-wide">EMPLOYEE / STAFF</span>
+              <h4 id="passGuestName" class="text-2xl font-extrabold text-slate-900 pt-0.5">Guest Name</h4>
               <p id="passGuestEmail" class="text-xs text-slate-500">guest@example.com</p>
               <p id="passGuestId" class="font-mono text-sm font-bold text-red-700 pt-1">XMAS-2026-XXXX</p>
             </div>
             <div id="passActions" class="hidden mt-5 pt-4 border-t border-slate-100 w-full flex flex-wrap justify-center gap-2">
               <button type="button" onclick="resendCurrentPassEmail()" class="px-3.5 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-semibold flex items-center gap-1.5">
-                <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
-                <span>Resend Attachment</span>
+                <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                <span>Resend Email</span>
               </button>
               <button type="button" onclick="downloadCurrentQrPng()" class="px-3.5 py-2 rounded-lg bg-slate-800 hover:bg-slate-900 text-white text-xs font-semibold flex items-center gap-1.5">
                 <i data-lucide="download" class="w-3.5 h-3.5"></i>
-                <span>Save PNG</span>
+                <span>Save Pass PNG</span>
               </button>
               <button type="button" onclick="window.print()" class="px-3.5 py-2 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-semibold flex items-center gap-1.5">
                 <i data-lucide="printer" class="w-3.5 h-3.5"></i>
@@ -328,34 +319,37 @@
     </section>
   </main>
 
-  <!-- EmailJS Attachment & Template Modal -->
+  <!-- EmailJS Official Event Pass Template Modal -->
   <div id="emailModal" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl max-w-xl w-full p-6 shadow-xl space-y-4">
       <div class="flex items-center justify-between border-b pb-3">
-        <h3 class="font-bold text-slate-900">EmailJS Attachment Setup (template_n9u8619)</h3>
+        <h3 class="font-bold text-slate-900">EmailJS Official Pass Template (template_n9u8619)</h3>
         <button onclick="document.getElementById('emailModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-xl">&times;</button>
       </div>
       <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-900 space-y-1">
-        <p class="font-bold">1. Enable Variable Attachment in EmailJS:</p>
-        <p>Open <strong>template_n9u8619</strong> &rarr; <strong>Attachments</strong> tab &rarr; <strong>Add Attachment</strong> &rarr; choose <strong>Variable Attachment</strong>:</p>
-        <ul class="list-disc pl-5 font-mono">
-          <li>File Name: {{attachment_name}}</li>
-          <li>Parameter Name: content</li>
-          <li>Content Type: image/png</li>
-        </ul>
+        <p class="font-bold">Setup in EmailJS (Works on Free Plan):</p>
+        <p>1. Set <strong>Subject</strong> to: <code>Christmas Party 2026 Official Pass: {{to_name}}</code></p>
+        <p>2. Set <strong>To Email</strong> (right sidebar) to: <code>{{to_email}}</code></p>
+        <p>3. Click <strong>Edit Content</strong> &rarr; <strong>&lt;&gt; (Source code)</strong> and paste this HTML:</p>
       </div>
-      <p class="text-xs text-slate-600">
-        <strong>2. Optional HTML Body:</strong> Paste into Source Code (&lt;&gt;) and set To Email to <code class="bg-slate-100 px-1 rounded">{{to_email}}</code>:
-      </p>
-      <textarea id="emailTemplateCode" readonly rows="7" class="w-full font-mono text-xs p-3 bg-slate-900 text-emerald-300 rounded-xl"><div style="font-family: Arial, sans-serif; max-width: 480px; margin: auto; border: 2px solid #991b1b; border-radius: 14px; overflow: hidden;">
-  <div style="background: #991b1b; color: #ffffff; padding: 20px; text-align: center;">
-    <h2 style="margin: 0;">Christmas Party 2026</h2>
-    <p style="margin: 5px 0 0; color: #fde68a;">Your Official QR Check-In Pass is Attached</p>
+      <textarea id="emailTemplateCode" readonly rows="9" class="w-full font-mono text-xs p-3 bg-slate-900 text-emerald-300 rounded-xl"><div style="font-family: Arial, Helvetica, sans-serif; max-width: 380px; margin: 20px auto; background-color: #ffffff; border: 1.5px solid #e2e8f0; border-radius: 18px; overflow: hidden;">
+  <div style="background: linear-gradient(90deg, #14532d 0%, #4a2518 45%, #8b1515 100%); background-color: #8b1515; color: #ffffff; padding: 22px 20px; text-align: center;">
+    <p style="margin: 0; font-size: 11px; font-weight: bold; letter-spacing: 2px; color: #fbbf24; text-transform: uppercase;">OFFICIAL EVENT PASS</p>
+    <h2 style="margin: 6px 0 0; font-size: 22px; font-weight: 800; color: #ffffff;">Christmas Party 2026</h2>
   </div>
-  <div style="padding: 24px; text-align: center;">
-    <p>Hi <strong>{{to_name}}</strong> ({{guest_type}}),</p>
-    <p>Please download or open the attached QR Pass PNG image and present it at the entrance.</p>
-    <p style="font-family: monospace; font-size: 18px; font-weight: bold; color: #991b1b;">Pass ID: {{guest_id}}</p>
+  <div style="padding: 26px 20px; text-align: center; background-color: #ffffff;">
+    <div style="display: inline-block; padding: 14px; border: 2px dashed #fda4af; border-radius: 18px; background-color: #ffffff;">
+      <img src="{{qr_code_url}}" alt="Official Event Pass QR Code" width="190" height="190" style="display: block; border: 0;" />
+    </div>
+    <div style="margin-top: 20px;">
+      <span style="display: inline-block; padding: 5px 14px; border-radius: 999px; background-color: #d1fae5; color: #065f46; font-size: 11px; font-weight: 800; text-transform: uppercase;">{{guest_type}}</span>
+    </div>
+    <h3 style="margin: 10px 0 4px; font-size: 22px; font-weight: 800; color: #0f172a;">{{to_name}}</h3>
+    <p style="margin: 0 0 10px; font-size: 13px; color: #64748b;">{{to_email}}</p>
+    <p style="margin: 0; font-family: 'Courier New', Courier, monospace; font-size: 15px; font-weight: bold; color: #b91c1c;">{{guest_id}}</p>
+    <div style="margin-top: 18px; padding-top: 14px; border-top: 1px solid #f1f5f9;">
+      <a href="{{qr_code_url}}" target="_blank" style="display: inline-block; padding: 8px 16px; background-color: #991b1b; color: #ffffff; text-decoration: none; border-radius: 8px; font-size: 12px; font-weight: bold;">Open / Save QR Image</a>
+    </div>
   </div>
 </div></textarea>
       <div class="flex justify-end gap-2">
@@ -367,7 +361,7 @@
   <!-- Toast Container -->
   <div id="toastBox" class="fixed bottom-4 right-4 z-50 space-y-2"></div>
 
-  <!-- Universal Cloud Sync & Styled QR Attachment Engine -->
+  <!-- Universal Cloud Sync, Official Pass PNG Generator & Email Engine -->
   <script>
     var FIREBASE_PROJECT_ID = "qrattendance-39ba7";
     var FIREBASE_API_KEY = "AIzaSyA_mpRuJB1Dl1LE_8dVuuRnpvp3uaTiU0Y";
@@ -378,7 +372,7 @@
     var guests = [];
     try { guests = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]"); } catch (e) { guests = []; }
     var currentPassGuest = null;
-    var currentStyledQrDataUrl = null;
+    var currentPassDataUrl = null;
     var html5QrScanner = null;
     var isSyncingNow = false;
 
@@ -515,23 +509,26 @@
       syncFromCloud(true);
     }
 
-    // Custom Festive QR Pass Designer (Draws high-contrast scannable QR with holiday frame, badge & text)
-    function buildStyledQrDataUrl(guest, themeName) {
-      return new Promise(function (resolve) {
-        var themes = {
-          "classic-christmas": { primary: "#991b1b", secondary: "#15803d", accent: "#d97706", bg: "#fffbeb", qrDark: "#7f1d1d", icon: "★" },
-          "emerald-pine":      { primary: "#14532d", secondary: "#b91c1c", accent: "#eab308", bg: "#f0fdf4", qrDark: "#14532d", icon: "❄" },
-          "royal-gold":        { primary: "#1e3a8a", secondary: "#b45309", accent: "#f59e0b", bg: "#eff6ff", qrDark: "#1e3a8a", icon: "✦" }
-        };
-        var t = themes[themeName || guest.theme || "classic-christmas"] || themes["classic-christmas"];
+    function roundRectPath(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
 
+    // Renders the Official Event Pass PNG for local download & preview
+    function buildEventPassPngDataUrl(guest) {
+      return new Promise(function (resolve) {
         var stage = document.getElementById("hiddenQrStage");
         stage.innerHTML = "";
         new QRCode(stage, {
           text: guest.id,
-          width: 240,
-          height: 240,
-          colorDark: t.qrDark,
+          width: 220,
+          height: 220,
+          colorDark: "#7f1d1d",
           colorLight: "#ffffff",
           correctLevel: QRCode.CorrectLevel.H
         });
@@ -539,95 +536,102 @@
         setTimeout(function () {
           var rawCanvas = stage.querySelector("canvas");
           var card = document.createElement("canvas");
-          card.width = 360;
-          card.height = 450;
+          card.width = 420;
+          card.height = 510;
           var ctx = card.getContext("2d");
 
-          // Card Background
-          ctx.fillStyle = t.bg;
+          ctx.fillStyle = "#ffffff";
           ctx.fillRect(0, 0, card.width, card.height);
 
-          // Outer Festive Border
-          ctx.strokeStyle = t.primary;
-          ctx.lineWidth = 8;
-          ctx.strokeRect(10, 10, card.width - 20, card.height - 20);
-
-          // Inner Gold Dashed Accent
           ctx.save();
-          ctx.strokeStyle = t.accent;
-          ctx.lineWidth = 2;
-          ctx.setLineDash([6, 4]);
-          ctx.strokeRect(18, 18, card.width - 36, card.height - 36);
-          ctx.restore();
+          roundRectPath(ctx, 4, 4, card.width - 8, card.height - 8, 18);
+          ctx.clip();
 
-          // Top Header Banner
-          ctx.fillStyle = t.primary;
-          ctx.fillRect(22, 22, card.width - 44, 58);
-          ctx.fillStyle = "#fde68a";
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(4, 4, card.width - 8, card.height - 8);
+
+          var grad = ctx.createLinearGradient(0, 0, card.width, 0);
+          grad.addColorStop(0, "#14532d");
+          grad.addColorStop(0.45, "#4a2518");
+          grad.addColorStop(1, "#8b1515");
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, card.width, 96);
+
+          ctx.fillStyle = "#fbbf24";
           ctx.font = "bold 11px Arial, sans-serif";
           ctx.textAlign = "center";
-          ctx.fillText("OFFICIAL ENTRY PASS", card.width / 2, 43);
-          ctx.fillStyle = "#ffffff";
-          ctx.font = "bold 18px Arial, sans-serif";
-          ctx.fillText("CHRISTMAS PARTY 2026", card.width / 2, 66);
+          ctx.fillText("O F F I C I A L   E V E N T   P A S S", card.width / 2, 38);
 
-          // White QR Quiet-Zone Box (Guarantees reliable scanning)
           ctx.fillStyle = "#ffffff";
-          ctx.fillRect(52, 94, 256, 256);
-          ctx.strokeStyle = t.secondary;
-          ctx.lineWidth = 3;
-          ctx.strokeRect(52, 94, 256, 256);
+          ctx.font = "bold 22px Arial, sans-serif";
+          ctx.fillText("Christmas Party 2026", card.width / 2, 68);
 
-          // Draw QR Code
+          var boxX = 95, boxY = 122, boxSize = 230;
+          ctx.save();
+          roundRectPath(ctx, boxX, boxY, boxSize, boxSize, 18);
+          ctx.fillStyle = "#ffffff";
+          ctx.fill();
+          ctx.strokeStyle = "#fda4af";
+          ctx.lineWidth = 1.5;
+          ctx.setLineDash([5, 4]);
+          ctx.stroke();
+          ctx.restore();
+
           if (rawCanvas) {
-            ctx.drawImage(rawCanvas, 60, 102, 240, 240);
+            ctx.drawImage(rawCanvas, boxX + 15, boxY + 15, 200, 200);
           }
 
-          // Center Holiday Emblem Badge (Safe inside Level H error correction)
-          ctx.fillStyle = "#ffffff";
-          ctx.beginPath();
-          ctx.arc(180, 222, 22, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = t.primary;
-          ctx.beginPath();
-          ctx.arc(180, 222, 18, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = "#fde68a";
-          ctx.font = "bold 20px Arial, sans-serif";
-          ctx.fillText(t.icon, 180, 229);
+          var badgeText = (guest.type || "EMPLOYEE / STAFF").toUpperCase();
+          ctx.font = "bold 11px Arial, sans-serif";
+          var textWidth = ctx.measureText(badgeText).width;
+          var pillW = textWidth + 28;
+          var pillH = 24;
+          var pillX = (card.width - pillW) / 2;
+          var pillY = 374;
 
-          // Guest Name & ID Footer
+          roundRectPath(ctx, pillX, pillY, pillW, pillH, 12);
+          ctx.fillStyle = "#d1fae5";
+          ctx.fill();
+
+          ctx.fillStyle = "#065f46";
+          ctx.fillText(badgeText, card.width / 2, pillY + 16);
+
           ctx.fillStyle = "#0f172a";
-          ctx.font = "bold 17px Arial, sans-serif";
-          var displayName = (guest.name || "Guest").substring(0, 26);
-          ctx.fillText(displayName, card.width / 2, 378);
+          ctx.font = "bold 22px Arial, sans-serif";
+          ctx.fillText((guest.name || "Guest").substring(0, 28), card.width / 2, 426);
 
-          ctx.fillStyle = t.secondary;
-          ctx.font = "bold 12px Arial, sans-serif";
-          ctx.fillText((guest.type || "GUEST").toUpperCase() + (guest.table ? " • " + guest.table : ""), card.width / 2, 398);
+          ctx.fillStyle = "#64748b";
+          ctx.font = "13px Arial, sans-serif";
+          ctx.fillText((guest.email || "").substring(0, 38), card.width / 2, 450);
 
-          ctx.fillStyle = t.primary;
-          ctx.font = "bold 14px Courier New, monospace";
-          ctx.fillText(guest.id, card.width / 2, 420);
+          ctx.fillStyle = "#b91c1c";
+          ctx.font = "bold 15px 'Courier New', monospace";
+          ctx.fillText(guest.id, card.width / 2, 476);
 
-          // Export as optimized PNG Data URL (~20KB so EmailJS free tier accepts attachment)
+          ctx.restore();
+
+          roundRectPath(ctx, 4, 4, card.width - 8, card.height - 8, 18);
+          ctx.strokeStyle = "#e2e8f0";
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
           resolve(card.toDataURL("image/png"));
         }, 60);
       });
     }
 
+    // Sends Official Event Pass card & deep-crimson QR via EmailJS Free Tier
     async function sendQrEmail(guest) {
-      var dataUrl = currentStyledQrDataUrl || await buildStyledQrDataUrl(guest, guest.theme);
+      var qrUrl = "https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=8&color=7f1d1d&bgcolor=ffffff&data=" + encodeURIComponent(guest.id);
       var templateParams = {
         to_name: guest.name,
         to_email: guest.email,
         guest_id: guest.id,
-        guest_type: guest.type,
+        guest_type: (guest.type || "Employee / Staff").toUpperCase(),
         table_info: guest.table || "Open Seating",
         event_name: "Christmas Party 2026",
-        attachment_name: "Christmas_Pass_" + guest.id + ".png",
-        content: dataUrl,
-        message: "Hi " + guest.name + ", your styled Christmas Party QR Pass (" + guest.id + ") is attached to this email."
+        qr_code_url: qrUrl,
+        message: "Hi " + guest.name + ", your Official Event Pass ID is " + guest.id + ". View QR: " + qrUrl
       };
 
       try {
@@ -638,9 +642,9 @@
         );
         guest.emailSent = true;
         await pushGuestToCloud(guest);
-        showToast("QR Pass PNG attached & emailed to " + guest.email + "!", "success");
+        showToast("Official Event Pass emailed to " + guest.email + "!", "success");
       } catch (err) {
-        showToast("Registered, but email failed: " + (err && err.text ? err.text : "Check EmailJS Attachment tab"), "warning");
+        showToast("Registered, but email failed: " + (err && err.text ? err.text : "Check EmailJS"), "warning");
       }
     }
 
@@ -650,7 +654,6 @@
       var email = document.getElementById("guestEmail").value.trim();
       var type = document.getElementById("guestType").value;
       var table = document.getElementById("guestTable").value.trim();
-      var theme = document.getElementById("qrDesignTheme").value;
       var shouldEmail = document.getElementById("autoSendEmail").checked;
 
       var randomCode = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -660,7 +663,6 @@
         email: email,
         type: type,
         table: table,
-        theme: theme,
         checkedIn: false,
         checkInTime: "",
         emailSent: false,
@@ -681,11 +683,19 @@
 
     async function renderPassPreview(guest) {
       currentPassGuest = guest;
-      var dataUrl = await buildStyledQrDataUrl(guest, guest.theme);
-      currentStyledQrDataUrl = dataUrl;
+      var dataUrl = await buildEventPassPngDataUrl(guest);
+      currentPassDataUrl = dataUrl;
 
       var container = document.getElementById("qrCanvasContainer");
-      container.innerHTML = '<img src="' + dataUrl + '" alt="Styled QR Pass" class="w-[240px] h-auto rounded-xl shadow-md" />';
+      container.innerHTML = "";
+      new QRCode(container, {
+        text: guest.id,
+        width: 184,
+        height: 184,
+        colorDark: "#7f1d1d",
+        colorLight: "#ffffff",
+        correctLevel: QRCode.CorrectLevel.H
+      });
 
       document.getElementById("passBadgeType").textContent = guest.type.toUpperCase();
       document.getElementById("passGuestName").textContent = guest.name;
@@ -699,10 +709,10 @@
     }
 
     function downloadCurrentQrPng() {
-      if (!currentPassGuest || !currentStyledQrDataUrl) return;
+      if (!currentPassGuest || !currentPassDataUrl) return;
       var link = document.createElement("a");
-      link.download = currentPassGuest.id + "_" + currentPassGuest.name.replace(/\s+/g, "_") + ".png";
-      link.href = currentStyledQrDataUrl;
+      link.download = "Official_Event_Pass_" + currentPassGuest.id + ".png";
+      link.href = currentPassDataUrl;
       link.click();
     }
 
@@ -817,8 +827,8 @@
 
       tbody.innerHTML = filtered.map(function (g) {
         var emailBadge = g.emailSent
-          ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Attached & Sent</span>'
-          : '<button onclick="triggerResend(\'' + g.id + '\')" class="px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold">Send QR</button>';
+          ? '<span class="px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold">Sent</span>'
+          : '<button onclick="triggerResend(\'' + g.id + '\')" class="px-2 py-0.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold">Send Pass</button>';
         var statusBadge = g.checkedIn
           ? '<span class="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 font-bold">Checked In (' + g.checkInTime + ')</span>'
           : '<span class="px-2.5 py-1 rounded-full bg-amber-100 text-amber-800 font-semibold">Pending</span>';
@@ -831,7 +841,7 @@
           '<td class="py-3 px-4 text-xs">' + statusBadge + '</td>' +
           '<td class="py-3 px-4 text-right space-x-1">' +
             '<button onclick="toggleGuestCheckIn(\'' + g.id + '\')" class="px-2.5 py-1 rounded-lg border border-slate-300 hover:bg-slate-100 text-xs font-semibold">' + (g.checkedIn ? "Undo" : "Check In") + '</button>' +
-            '<button onclick="previewGuestFromTable(\'' + g.id + '\')" class="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-semibold">QR</button>' +
+            '<button onclick="previewGuestFromTable(\'' + g.id + '\')" class="px-2.5 py-1 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 text-xs font-semibold">Pass</button>' +
             '<button onclick="removeGuest(\'' + g.id + '\')" class="px-2 py-1 rounded-lg text-slate-400 hover:text-red-600 text-xs">&times;</button>' +
           '</td>' +
         '</tr>';
@@ -864,7 +874,6 @@
     async function triggerResend(id) {
       var g = guests.find(function (item) { return item.id === id; });
       if (!g) return;
-      currentStyledQrDataUrl = await buildStyledQrDataUrl(g, g.theme);
       await sendQrEmail(g);
     }
 
@@ -920,9 +929,8 @@
             id: String(existingId).trim(),
             name: String(name).trim(),
             email: String(email).trim(),
-            type: r["Guest Type"] || "Regular Guest",
+            type: r["Guest Type"] || "Employee / Staff",
             table: r["Table / Dept"] || "",
-            theme: "classic-christmas",
             checkedIn: String(r["Check-In Status"] || "").toLowerCase() === "checked in",
             checkInTime: r["Check-In Time"] || "",
             emailSent: String(r["Email Sent"] || "").toLowerCase() === "yes",
